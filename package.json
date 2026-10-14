@@ -15,7 +15,7 @@
     "build:web": "pnpm --filter @travel-where-to/web build",
     "start:api": "pnpm --filter @travel-where-to/api start",
     "typecheck": "tsc --noEmit -p tsconfig.json && pnpm --filter @travel-where-to/web typecheck",
-    "test": "tsx --test \"packages/*/src/**/*.test.ts\" \"services/*/src/**/*.test.ts\"",
+    "test": "tsx --test \"packages/*/src/**/*.test.ts\" \"services/*/src/**/*.test.ts\" \"tests/**/*.test.ts\"",
     "demo": "tsx services/api/src/demo.ts",
     "check:providers": "tsx services/api/src/check-providers.ts",
     "why": "tsx services/api/src/why.ts",
