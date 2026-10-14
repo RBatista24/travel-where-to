@@ -1,0 +1,169 @@
+{
+  "apps/web/src/components/molecules/form-field.tsx": {
+    "sonarjs/no-nested-conditional": {
+      "count": 2
+    }
+  },
+  "apps/web/src/components/molecules/freshness.tsx": {
+    "sonarjs/no-nested-conditional": {
+      "count": 2
+    }
+  },
+  "apps/web/src/components/molecules/score-breakdown.tsx": {
+    "sonarjs/no-nested-conditional": {
+      "count": 1
+    }
+  },
+  "apps/web/src/components/organisms/describe-trip-box.tsx": {
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    }
+  },
+  "apps/web/src/components/organisms/destination-section.tsx": {
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/no-nested-conditional": {
+      "count": 2
+    }
+  },
+  "apps/web/src/components/organisms/search-summary.tsx": {
+    "sonarjs/no-nested-conditional": {
+      "count": 1
+    }
+  },
+  "apps/web/src/components/organisms/theme-park-section.tsx": {
+    "sonarjs/no-nested-conditional": {
+      "count": 1
+    }
+  },
+  "apps/web/src/components/pages/results-page.tsx": {
+    "sonarjs/no-nested-conditional": {
+      "count": 2
+    }
+  },
+  "apps/web/src/components/pages/search-page.tsx": {
+    "sonarjs/no-nested-conditional": {
+      "count": 1
+    }
+  },
+  "apps/web/src/lib/api.ts": {
+    "sonarjs/no-nested-conditional": {
+      "count": 1
+    }
+  },
+  "apps/web/src/lib/search-form.ts": {
+    "sonarjs/cognitive-complexity": {
+      "count": 3
+    },
+    "sonarjs/no-nested-conditional": {
+      "count": 1
+    }
+  },
+  "packages/accommodation-providers/src/LiteApiAccommodationProvider.ts": {
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    }
+  },
+  "packages/accommodation-providers/src/MockAccommodationProvider.ts": {
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/no-nested-conditional": {
+      "count": 2
+    }
+  },
+  "packages/accommodation-providers/src/SerpApiGoogleHotelsProvider.ts": {
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/no-nested-conditional": {
+      "count": 1
+    }
+  },
+  "packages/destination-engine/src/candidates.ts": {
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/no-nested-conditional": {
+      "count": 1
+    }
+  },
+  "packages/domain/src/criteria.ts": {
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    }
+  },
+  "packages/flight-providers/src/MockFlightProvider.ts": {
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/no-nested-conditional": {
+      "count": 1
+    }
+  },
+  "packages/flight-providers/src/SerpApiGoogleFlightsProvider.ts": {
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    }
+  },
+  "packages/llm/src/MockLlmProvider.ts": {
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    }
+  },
+  "packages/ranking/src/components.ts": {
+    "sonarjs/cognitive-complexity": {
+      "count": 2
+    },
+    "sonarjs/no-nested-conditional": {
+      "count": 3
+    }
+  },
+  "packages/routing-providers/src/OpenRouteServiceRoutingProvider.ts": {
+    "sonarjs/no-nested-conditional": {
+      "count": 1
+    }
+  },
+  "packages/search-engine/src/SearchEngine.ts": {
+    "sonarjs/cognitive-complexity": {
+      "count": 3
+    },
+    "sonarjs/no-nested-conditional": {
+      "count": 2
+    }
+  },
+  "packages/search-engine/src/relaxation.ts": {
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    }
+  },
+  "packages/shared/src/dates.ts": {
+    "sonarjs/redundant-type-aliases": {
+      "count": 1
+    }
+  },
+  "packages/weather-providers/src/openMeteo.test.ts": {
+    "sonarjs/no-nested-conditional": {
+      "count": 1
+    }
+  },
+  "services/api/src/app.ts": {
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    }
+  },
+  "services/api/src/composition.ts": {
+    "sonarjs/cognitive-complexity": {
+      "count": 1
+    },
+    "sonarjs/no-nested-conditional": {
+      "count": 2
+    }
+  },
+  "services/api/src/demo.ts": {
+    "sonarjs/no-nested-conditional": {
+      "count": 1
+    }
+  }
+}
