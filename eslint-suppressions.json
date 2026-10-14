@@ -1,12 +1,4 @@
 {
-  "packages/destination-engine/src/candidates.ts": {
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    },
-    "sonarjs/no-nested-conditional": {
-      "count": 1
-    }
-  },
   "packages/flight-providers/src/MockFlightProvider.ts": {
     "sonarjs/cognitive-complexity": {
       "count": 1
