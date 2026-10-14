@@ -68,6 +68,94 @@ export function mapAmenities(amenities: readonly string[]): AccommodationFacilit
     return [...out];
 }
 
+type PropertyData = z.infer<typeof PropertySchema>;
+type Travellers = ReturnType<typeof countTravellers>;
+
+const NO_RESULTS = /hasn't returned any results|no results/i;
+const RATE_LIMIT = /run out of searches|limit/i;
+
+function searchQuery(
+    options: SerpApiHotelsOptions,
+    req: AccommodationSearchRequest,
+    c: Travellers,
+    rentals: boolean,
+): URLSearchParams {
+    return new URLSearchParams({
+        engine: 'google_hotels',
+        // For specific properties (a park's official hotels), search the hotels at that place.
+        q: req.wantedPropertyNames?.length
+            ? `hotels at ${req.locationName ?? req.locationId}`
+            : (req.locationName ?? req.locationId),
+        check_in_date: req.checkIn,
+        check_out_date: req.checkOut,
+        adults: String(c.adults),
+        currency: req.currency,
+        gl: options.gl ?? 'pt',
+        hl: options.hl ?? 'en',
+        api_key: options.apiKey,
+        ...(c.children + c.infants > 0
+            ? {
+                  children: String(c.children + c.infants),
+                  children_ages: [...c.childAges, ...c.infantAges.map((a) => Math.max(1, a))].join(
+                      ',',
+                  ),
+              }
+            : {}),
+        ...(rentals ? { vacation_rentals: 'true' } : {}),
+    });
+}
+
+function deepLinkFor(property: PropertyData, hotelsUrl: string | undefined): { deepLink?: string } {
+    const link = property.link || hotelsUrl;
+    return link ? { deepLink: link } : {};
+}
+
+/** One Google Hotels property → an offer, or undefined when it has no price for these dates. */
+function offerFor(
+    raw: unknown,
+    req: AccommodationSearchRequest,
+    rentals: boolean,
+    now: Date,
+    hotelsUrl: string | undefined,
+): AccommodationOffer | undefined {
+    const p = PropertySchema.safeParse(raw);
+    if (!p.success) return undefined;
+    const total = p.data.total_rate?.extracted_lowest;
+    if (!total) return undefined; // no price for these dates → not an offer
+    const coords = p.data.gps_coordinates
+        ? { lat: p.data.gps_coordinates.latitude, lon: p.data.gps_coordinates.longitude }
+        : undefined;
+    return {
+        propertyId: `google:${p.data.property_token ?? p.data.name}`,
+        name: p.data.name,
+        type: p.data.type === 'vacation rental' || rentals ? 'APARTMENT' : 'HOTEL',
+        ...(p.data.extracted_hotel_class ? { stars: p.data.extracted_hotel_class } : {}),
+        ...(p.data.overall_rating ? { rating: Math.round(p.data.overall_rating * 20) / 10 } : {}),
+        ...(p.data.reviews ? { reviewCount: p.data.reviews } : {}),
+        facilities: mapAmenities(p.data.amenities ?? []),
+        coordinates: coords ?? req.centre,
+        ...(coords
+            ? { distanceToCentreM: Math.round(haversineKm(coords, req.centre) * 1000) }
+            : {}),
+        ...(coords && req.beach
+            ? { distanceToBeachM: Math.round(haversineKm(coords, req.beach) * 1000) }
+            : {}),
+        roomDescription: 'Cheapest available option on Google Hotels',
+        breakfastIncluded: false,
+        price: {
+            amount: fromMajor(total, req.currency),
+            confidence: 'VERIFIED',
+            attribution: {
+                provider: PROVIDER,
+                providerOfferId: p.data.property_token ?? p.data.name,
+                retrievedAt: now,
+                expiresAt: new Date(now.getTime() + 60 * 60_000),
+                ...deepLinkFor(p.data, hotelsUrl),
+            },
+        },
+    };
+}
+
 /**
  * Hotels from Google Hotels through SerpApi: real current prices from many sites.
  * One call per destination and dates - expensive on the free plan (250 searches/month),
@@ -89,113 +177,47 @@ export class SerpApiGoogleHotelsProvider implements AccommodationProvider {
         const c = countTravellers(req.travellers);
         const rentals = !req.types.includes('HOTEL');
         const key = `${req.locationId}:${req.checkIn}:${req.checkOut}:${c.adults}:${c.childAges.join(',')}:${rentals}:${req.currency}:${req.wantedPropertyNames?.length ?? 0}`;
-        return this.cache.get(key, async () => {
-            const qs = new URLSearchParams({
-                engine: 'google_hotels',
-                // For specific properties (a park's official hotels), search the hotels at that place.
-                q: req.wantedPropertyNames?.length
-                    ? `hotels at ${req.locationName ?? req.locationId}`
-                    : (req.locationName ?? req.locationId),
-                check_in_date: req.checkIn,
-                check_out_date: req.checkOut,
-                adults: String(c.adults),
-                currency: req.currency,
-                gl: this.options.gl ?? 'pt',
-                hl: this.options.hl ?? 'en',
-                api_key: this.options.apiKey,
-                ...(c.children + c.infants > 0
-                    ? {
-                          children: String(c.children + c.infants),
-                          children_ages: [
-                              ...c.childAges,
-                              ...c.infantAges.map((a) => Math.max(1, a)),
-                          ].join(','),
-                      }
-                    : {}),
-                ...(rentals ? { vacation_rentals: 'true' } : {}),
-            });
-            const { status, body } = await providerFetchJson(
-                `${this.options.baseUrl ?? 'https://serpapi.com'}/search.json?${qs.toString()}`,
-                {},
-                {
-                    provider: PROVIDER,
-                    timeoutMs: this.options.timeoutMs ?? 30_000,
-                    ...(this.options.fetch ? { fetch: this.options.fetch } : {}),
-                },
+        return this.cache.get(key, () => this.fetchOffers(req, c, rentals));
+    }
+
+    private async fetchOffers(
+        req: AccommodationSearchRequest,
+        c: Travellers,
+        rentals: boolean,
+    ): Promise<AccommodationOffer[]> {
+        const url = `${this.options.baseUrl ?? 'https://serpapi.com'}/search.json?${searchQuery(this.options, req, c, rentals).toString()}`;
+        const { status, body } = await providerFetchJson(
+            url,
+            {},
+            {
+                provider: PROVIDER,
+                timeoutMs: this.options.timeoutMs ?? 30_000,
+                ...(this.options.fetch ? { fetch: this.options.fetch } : {}),
+            },
+        );
+        const parsed = ResponseSchema.safeParse(body);
+        if (status !== 200) {
+            throw providerStatusError(
+                PROVIDER,
+                status,
+                parsed.success ? (parsed.data.error ?? '') : '',
             );
-            const parsed = ResponseSchema.safeParse(body);
-            if (status !== 200)
-                throw providerStatusError(
-                    PROVIDER,
-                    status,
-                    parsed.success ? (parsed.data.error ?? '') : '',
-                );
-            if (!parsed.success)
-                throw new ProviderError(PROVIDER, 'INVALID_RESPONSE', parsed.error.message);
-            if (parsed.data.error) {
-                if (/hasn't returned any results|no results/i.test(parsed.data.error)) return [];
-                throw new ProviderError(
-                    PROVIDER,
-                    /run out of searches|limit/i.test(parsed.data.error)
-                        ? 'RATE_LIMITED'
-                        : 'UNAVAILABLE',
-                    parsed.data.error,
-                );
-            }
-            const now = this.clock.now();
-            const expiresAt = new Date(now.getTime() + 60 * 60_000);
-            const offers: AccommodationOffer[] = [];
-            for (const raw of parsed.data.properties ?? []) {
-                const p = PropertySchema.safeParse(raw);
-                if (!p.success) continue;
-                const total = p.data.total_rate?.extracted_lowest;
-                if (!total) continue; // no price for these dates → not an offer
-                const coords = p.data.gps_coordinates
-                    ? {
-                          lat: p.data.gps_coordinates.latitude,
-                          lon: p.data.gps_coordinates.longitude,
-                      }
-                    : undefined;
-                const facilities = mapAmenities(p.data.amenities ?? []);
-                offers.push({
-                    propertyId: `google:${p.data.property_token ?? p.data.name}`,
-                    name: p.data.name,
-                    type: p.data.type === 'vacation rental' || rentals ? 'APARTMENT' : 'HOTEL',
-                    ...(p.data.extracted_hotel_class
-                        ? { stars: p.data.extracted_hotel_class }
-                        : {}),
-                    ...(p.data.overall_rating
-                        ? { rating: Math.round(p.data.overall_rating * 20) / 10 }
-                        : {}),
-                    ...(p.data.reviews ? { reviewCount: p.data.reviews } : {}),
-                    facilities,
-                    coordinates: coords ?? req.centre,
-                    ...(coords
-                        ? { distanceToCentreM: Math.round(haversineKm(coords, req.centre) * 1000) }
-                        : {}),
-                    ...(coords && req.beach
-                        ? { distanceToBeachM: Math.round(haversineKm(coords, req.beach) * 1000) }
-                        : {}),
-                    roomDescription: 'Cheapest available option on Google Hotels',
-                    breakfastIncluded: false,
-                    price: {
-                        amount: fromMajor(total, req.currency),
-                        confidence: 'VERIFIED',
-                        attribution: {
-                            provider: PROVIDER,
-                            providerOfferId: p.data.property_token ?? p.data.name,
-                            retrievedAt: now,
-                            expiresAt,
-                            ...(p.data.link
-                                ? { deepLink: p.data.link }
-                                : parsed.data.search_metadata?.google_hotels_url
-                                  ? { deepLink: parsed.data.search_metadata.google_hotels_url }
-                                  : {}),
-                        },
-                    },
-                });
-            }
-            return offers;
-        });
+        }
+        if (!parsed.success) {
+            throw new ProviderError(PROVIDER, 'INVALID_RESPONSE', parsed.error.message);
+        }
+        const data = parsed.data;
+        if (data.error) {
+            if (NO_RESULTS.test(data.error)) return [];
+            const code = RATE_LIMIT.test(data.error) ? 'RATE_LIMITED' : 'UNAVAILABLE';
+            throw new ProviderError(PROVIDER, code, data.error);
+        }
+        const now = this.clock.now();
+        const offers: AccommodationOffer[] = [];
+        for (const raw of data.properties ?? []) {
+            const offer = offerFor(raw, req, rentals, now, data.search_metadata?.google_hotels_url);
+            if (offer) offers.push(offer);
+        }
+        return offers;
     }
 }
