@@ -18,133 +18,167 @@ import { fileURLToPath } from 'node:url';
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const SCOPE = '@travel-where-to/';
 
-const PROVIDERS = ['flight-providers', 'accommodation-providers', 'routing-providers', 'weather-providers'];
+const PROVIDERS = [
+    'flight-providers',
+    'accommodation-providers',
+    'routing-providers',
+    'weather-providers',
+];
 
 /** Workspace packages each package may import from production code. */
 const ALLOWED: Record<string, readonly string[]> = {
-  shared: [],
-  domain: ['shared'],
-  pricing: ['shared', 'domain'],
-  ranking: ['shared', 'domain'],
-  'destination-engine': ['shared', 'domain', 'ranking'],
-  'flight-providers': ['shared', 'domain'],
-  'accommodation-providers': ['shared', 'domain'],
-  'routing-providers': ['shared', 'domain'],
-  'weather-providers': ['shared', 'domain'],
-  llm: ['shared', 'domain'],
-  'search-engine': ['shared', 'domain', 'pricing', 'ranking', 'destination-engine'],
-  api: ['shared', 'domain', 'pricing', 'ranking', 'destination-engine', 'llm', 'search-engine', ...PROVIDERS],
-  web: ['shared', 'domain', 'llm', 'ranking'],
+    shared: [],
+    domain: ['shared'],
+    pricing: ['shared', 'domain'],
+    ranking: ['shared', 'domain'],
+    'destination-engine': ['shared', 'domain', 'ranking'],
+    'flight-providers': ['shared', 'domain'],
+    'accommodation-providers': ['shared', 'domain'],
+    'routing-providers': ['shared', 'domain'],
+    'weather-providers': ['shared', 'domain'],
+    llm: ['shared', 'domain'],
+    'search-engine': ['shared', 'domain', 'pricing', 'ranking', 'destination-engine'],
+    api: [
+        'shared',
+        'domain',
+        'pricing',
+        'ranking',
+        'destination-engine',
+        'llm',
+        'search-engine',
+        ...PROVIDERS,
+    ],
+    web: ['shared', 'domain', 'llm', 'ranking'],
 };
 
 /** Extra workspace packages a package's tests may import (real adapters exercised by the engine tests). */
 const ALLOWED_IN_TESTS: Record<string, readonly string[]> = {
-  'search-engine': PROVIDERS,
+    'search-engine': PROVIDERS,
 };
 
 /** Packages that import nothing outside the workspace and Node's built-ins. */
 const NO_THIRD_PARTY = ['shared', 'domain'];
 
 interface Pkg {
-  readonly name: string;
-  readonly dir: string;
-  readonly deps: ReadonlySet<string>;
-  readonly devDeps: ReadonlySet<string>;
+    readonly name: string;
+    readonly dir: string;
+    readonly deps: ReadonlySet<string>;
+    readonly devDeps: ReadonlySet<string>;
 }
 
 function workspacePackages(): Pkg[] {
-  const dirs = ['packages', 'services', 'apps'].flatMap((group) =>
-    readdirSync(join(ROOT, group)).map((d) => join(ROOT, group, d)).filter((d) => statSync(d).isDirectory()),
-  );
-  return dirs.map((dir) => {
-    const json = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')) as {
-      name: string;
-      dependencies?: Record<string, string>;
-      devDependencies?: Record<string, string>;
-    };
-    const local = (o: Record<string, string> | undefined) =>
-      new Set(Object.keys(o ?? {}).filter((k) => k.startsWith(SCOPE)).map((k) => k.slice(SCOPE.length)));
-    return { name: json.name.slice(SCOPE.length), dir, deps: local(json.dependencies), devDeps: local(json.devDependencies) };
-  });
+    const dirs = ['packages', 'services', 'apps'].flatMap((group) =>
+        readdirSync(join(ROOT, group))
+            .map((d) => join(ROOT, group, d))
+            .filter((d) => statSync(d).isDirectory()),
+    );
+    return dirs.map((dir) => {
+        const json = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')) as {
+            name: string;
+            dependencies?: Record<string, string>;
+            devDependencies?: Record<string, string>;
+        };
+        const local = (o: Record<string, string> | undefined) =>
+            new Set(
+                Object.keys(o ?? {})
+                    .filter((k) => k.startsWith(SCOPE))
+                    .map((k) => k.slice(SCOPE.length)),
+            );
+        return {
+            name: json.name.slice(SCOPE.length),
+            dir,
+            deps: local(json.dependencies),
+            devDeps: local(json.devDependencies),
+        };
+    });
 }
 
 function sourceFiles(dir: string): string[] {
-  return readdirSync(dir).flatMap((entry) => {
-    const path = join(dir, entry);
-    if (statSync(path).isDirectory()) return sourceFiles(path);
-    return /\.(ts|tsx)$/.test(entry) && !entry.endsWith('.d.ts') ? [path] : [];
-  });
+    return readdirSync(dir).flatMap((entry) => {
+        const path = join(dir, entry);
+        if (statSync(path).isDirectory()) return sourceFiles(path);
+        return /\.(ts|tsx)$/.test(entry) && !entry.endsWith('.d.ts') ? [path] : [];
+    });
 }
 
 const IMPORT_PATTERNS = [
-  /^\s*(?:import|export)\s[^;]*?\sfrom\s+['"]([^'"]+)['"]/gm,
-  /^\s*import\s+['"]([^'"]+)['"]/gm,
-  /\bimport\(\s*['"]([^'"]+)['"]\s*\)/g,
+    /^\s*(?:import|export)\s[^;]*?\sfrom\s+['"]([^'"]+)['"]/gm,
+    /^\s*import\s+['"]([^'"]+)['"]/gm,
+    /\bimport\(\s*['"]([^'"]+)['"]\s*\)/g,
 ];
 
 function importsOf(file: string): string[] {
-  const text = readFileSync(file, 'utf8');
-  return IMPORT_PATTERNS.flatMap((re) => [...text.matchAll(re)].map((m) => m[1] ?? ''));
+    const text = readFileSync(file, 'utf8');
+    return IMPORT_PATTERNS.flatMap((re) => [...text.matchAll(re)].map((m) => m[1] ?? ''));
 }
 
 const isTest = (file: string) => /\.test\.tsx?$/.test(file);
 const packages = workspacePackages();
 
 test('every workspace package has a layer rule', () => {
-  assert.deepEqual(packages.map((p) => p.name).filter((n) => !(n in ALLOWED)), []);
+    assert.deepEqual(
+        packages.map((p) => p.name).filter((n) => !(n in ALLOWED)),
+        [],
+    );
 });
 
 for (const pkg of packages) {
-  const files = sourceFiles(join(pkg.dir, 'src'));
+    const files = sourceFiles(join(pkg.dir, 'src'));
 
-  test(`${pkg.name}: imports only the workspace packages its layer allows`, () => {
-    const violations: string[] = [];
-    for (const file of files) {
-      const allowed = new Set([...(ALLOWED[pkg.name] ?? []), ...(isTest(file) ? (ALLOWED_IN_TESTS[pkg.name] ?? []) : [])]);
-      for (const spec of importsOf(file)) {
-        if (!spec.startsWith(SCOPE)) continue;
-        const target = spec.slice(SCOPE.length).split('/')[0] ?? '';
-        if (!allowed.has(target)) violations.push(`${relative(ROOT, file)} imports ${spec}`);
-      }
-    }
-    assert.deepEqual(violations, []);
-  });
-
-  test(`${pkg.name}: workspace imports are declared in package.json`, () => {
-    const missing: string[] = [];
-    for (const file of files) {
-      for (const spec of importsOf(file)) {
-        if (!spec.startsWith(SCOPE)) continue;
-        const target = spec.slice(SCOPE.length).split('/')[0] ?? '';
-        const declared = pkg.deps.has(target) || (isTest(file) && pkg.devDeps.has(target));
-        if (!declared) missing.push(`${relative(ROOT, file)} imports ${spec}`);
-      }
-    }
-    assert.deepEqual(missing, []);
-  });
-
-  test(`${pkg.name}: relative imports stay inside the package`, () => {
-    const escaping: string[] = [];
-    for (const file of files) {
-      for (const spec of importsOf(file)) {
-        if (!spec.startsWith('.')) continue;
-        const target = resolve(dirname(file), spec);
-        if (!(target + sep).startsWith(pkg.dir + sep)) escaping.push(`${relative(ROOT, file)} imports ${spec}`);
-      }
-    }
-    assert.deepEqual(escaping, []);
-  });
-
-  if (NO_THIRD_PARTY.includes(pkg.name)) {
-    test(`${pkg.name}: imports no third-party package`, () => {
-      const thirdParty: string[] = [];
-      for (const file of files) {
-        for (const spec of importsOf(file)) {
-          if (spec.startsWith('.') || spec.startsWith('node:') || spec.startsWith(SCOPE)) continue;
-          thirdParty.push(`${relative(ROOT, file)} imports ${spec}`);
+    test(`${pkg.name}: imports only the workspace packages its layer allows`, () => {
+        const violations: string[] = [];
+        for (const file of files) {
+            const allowed = new Set([
+                ...(ALLOWED[pkg.name] ?? []),
+                ...(isTest(file) ? (ALLOWED_IN_TESTS[pkg.name] ?? []) : []),
+            ]);
+            for (const spec of importsOf(file)) {
+                if (!spec.startsWith(SCOPE)) continue;
+                const target = spec.slice(SCOPE.length).split('/')[0] ?? '';
+                if (!allowed.has(target))
+                    violations.push(`${relative(ROOT, file)} imports ${spec}`);
+            }
         }
-      }
-      assert.deepEqual(thirdParty, []);
+        assert.deepEqual(violations, []);
     });
-  }
+
+    test(`${pkg.name}: workspace imports are declared in package.json`, () => {
+        const missing: string[] = [];
+        for (const file of files) {
+            for (const spec of importsOf(file)) {
+                if (!spec.startsWith(SCOPE)) continue;
+                const target = spec.slice(SCOPE.length).split('/')[0] ?? '';
+                const declared = pkg.deps.has(target) || (isTest(file) && pkg.devDeps.has(target));
+                if (!declared) missing.push(`${relative(ROOT, file)} imports ${spec}`);
+            }
+        }
+        assert.deepEqual(missing, []);
+    });
+
+    test(`${pkg.name}: relative imports stay inside the package`, () => {
+        const escaping: string[] = [];
+        for (const file of files) {
+            for (const spec of importsOf(file)) {
+                if (!spec.startsWith('.')) continue;
+                const target = resolve(dirname(file), spec);
+                if (!(target + sep).startsWith(pkg.dir + sep))
+                    escaping.push(`${relative(ROOT, file)} imports ${spec}`);
+            }
+        }
+        assert.deepEqual(escaping, []);
+    });
+
+    if (NO_THIRD_PARTY.includes(pkg.name)) {
+        test(`${pkg.name}: imports no third-party package`, () => {
+            const thirdParty: string[] = [];
+            for (const file of files) {
+                for (const spec of importsOf(file)) {
+                    if (spec.startsWith('.') || spec.startsWith('node:') || spec.startsWith(SCOPE))
+                        continue;
+                    thirdParty.push(`${relative(ROOT, file)} imports ${spec}`);
+                }
+            }
+            assert.deepEqual(thirdParty, []);
+        });
+    }
 }

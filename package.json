@@ -1,45 +1,45 @@
 {
-  "name": "travel-where-to",
-  "private": true,
-  "version": "0.1.0",
-  "description": "Travel Discovery Engine: find where you can go from origin, dates, travellers, budget and preferences.",
-  "type": "module",
-  "engines": {
-    "node": ">=22"
-  },
-  "packageManager": "pnpm@10.28.0",
-  "scripts": {
-    "dev": "pnpm -r --parallel --filter @travel-where-to/api --filter @travel-where-to/web dev",
-    "dev:api": "pnpm --filter @travel-where-to/api dev",
-    "dev:web": "pnpm --filter @travel-where-to/web dev",
-    "build:web": "pnpm --filter @travel-where-to/web build",
-    "start:api": "pnpm --filter @travel-where-to/api start",
-    "typecheck": "tsc --noEmit -p tsconfig.json && pnpm --filter @travel-where-to/web typecheck",
-    "test": "tsx --test \"packages/*/src/**/*.test.ts\" \"services/*/src/**/*.test.ts\" \"tests/**/*.test.ts\"",
-    "demo": "tsx services/api/src/demo.ts",
-    "check:providers": "tsx services/api/src/check-providers.ts",
-    "why": "tsx services/api/src/why.ts",
-    "explain": "tsx services/api/src/why.ts",
-    "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "fix": "pnpm format && pnpm lint:fix",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"
-  },
-  "devDependencies": {
-    "@eslint-community/eslint-plugin-eslint-comments": "^4.8.1",
-    "@eslint/js": "^9.39.5",
-    "@types/node": "^22.0.0",
-    "eslint": "^9.39.5",
-    "eslint-config-prettier": "^10.1.8",
-    "eslint-plugin-jsx-a11y": "^6.10.2",
-    "eslint-plugin-react-hooks": "^7.1.1",
-    "eslint-plugin-sonarjs": "^4.2.2",
-    "globals": "^17.13.0",
-    "prettier": "^3.9.10",
-    "tsx": "^4.19.0",
-    "typescript": "~5.9.2",
-    "typescript-eslint": "^8.71.2"
-  }
+    "name": "travel-where-to",
+    "private": true,
+    "version": "0.1.0",
+    "description": "Travel Discovery Engine: find where you can go from origin, dates, travellers, budget and preferences.",
+    "type": "module",
+    "engines": {
+        "node": ">=22"
+    },
+    "packageManager": "pnpm@10.28.0",
+    "scripts": {
+        "dev": "pnpm -r --parallel --filter @travel-where-to/api --filter @travel-where-to/web dev",
+        "dev:api": "pnpm --filter @travel-where-to/api dev",
+        "dev:web": "pnpm --filter @travel-where-to/web dev",
+        "build:web": "pnpm --filter @travel-where-to/web build",
+        "start:api": "pnpm --filter @travel-where-to/api start",
+        "typecheck": "tsc --noEmit -p tsconfig.json && pnpm --filter @travel-where-to/web typecheck",
+        "test": "tsx --test \"packages/*/src/**/*.test.ts\" \"services/*/src/**/*.test.ts\" \"tests/**/*.test.ts\"",
+        "demo": "tsx services/api/src/demo.ts",
+        "check:providers": "tsx services/api/src/check-providers.ts",
+        "why": "tsx services/api/src/why.ts",
+        "explain": "tsx services/api/src/why.ts",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix",
+        "format": "prettier --write .",
+        "format:check": "prettier --check .",
+        "fix": "pnpm format && pnpm lint:fix",
+        "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"
+    },
+    "devDependencies": {
+        "@eslint-community/eslint-plugin-eslint-comments": "^4.8.1",
+        "@eslint/js": "^9.39.5",
+        "@types/node": "^22.0.0",
+        "eslint": "^9.39.5",
+        "eslint-config-prettier": "^10.1.8",
+        "eslint-plugin-jsx-a11y": "^6.10.2",
+        "eslint-plugin-react-hooks": "^7.1.1",
+        "eslint-plugin-sonarjs": "^4.2.2",
+        "globals": "^17.13.0",
+        "prettier": "^3.9.10",
+        "tsx": "^4.19.0",
+        "typescript": "~5.9.2",
+        "typescript-eslint": "^8.71.2"
+    }
 }
