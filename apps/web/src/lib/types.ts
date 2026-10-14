@@ -1,5 +1,6 @@
 import type * as Domain from '@travel-where-to/domain';
 import type { InterpretedIntent as DomainInterpretedIntent } from '@travel-where-to/llm';
+import type { SearchRequestInput } from '@travel-where-to/api-contract';
 import type { Money } from '@travel-where-to/shared';
 
 /**
@@ -39,33 +40,8 @@ export type RelaxationSuggestion = Jsonify<Domain.RelaxationSuggestion>;
 export type InterpretedIntent = Jsonify<DomainInterpretedIntent>;
 export type TravelIntent = InterpretedIntent['intent'];
 
-export interface MoneyInput {
-    readonly amount: number;
-    readonly currency: string;
-}
-
-/** Body of POST /api/searches (money in major units). Mirrors services/api/src/schema.ts. */
-export interface SearchRequest {
-    readonly origin: SearchCriteria['origin'];
-    readonly dates: SearchCriteria['dates'];
-    readonly travellers: SearchCriteria['travellers'];
-    readonly budget: MoneyInput;
-    readonly transport: {
-        readonly modes: readonly TransportMode[];
-        readonly driving?: { readonly maxHours?: number; readonly preferredMaxHours?: number };
-        readonly vehicle?: {
-            readonly fuelType: 'PETROL' | 'DIESEL' | 'LPG' | 'ELECTRIC';
-            readonly consumptionPer100Km: number;
-            readonly fuelPrice: MoneyInput;
-        };
-        readonly flights?: SearchCriteria['transport']['flights'];
-    };
-    readonly destination: SearchCriteria['destination'];
-    readonly requirements: readonly Requirement[];
-    readonly accommodation: SearchCriteria['accommodation'];
-    readonly weather?: SearchCriteria['weather'];
-    readonly parkTickets?: SearchCriteria['parkTickets'];
-}
+/** Body of POST /api/searches, derived from the API's zod contract (money in major units). */
+export type SearchRequest = SearchRequestInput;
 
 export interface DestinationSummary {
     readonly id: string;

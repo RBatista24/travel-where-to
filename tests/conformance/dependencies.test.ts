@@ -29,18 +29,22 @@ const PROVIDERS = [
 const ALLOWED: Record<string, readonly string[]> = {
     shared: [],
     domain: ['shared'],
+    'provider-http': ['domain'],
+    'api-contract': ['shared', 'domain'],
     pricing: ['shared', 'domain'],
     ranking: ['shared', 'domain'],
     'destination-engine': ['shared', 'domain', 'ranking'],
-    'flight-providers': ['shared', 'domain'],
-    'accommodation-providers': ['shared', 'domain'],
-    'routing-providers': ['shared', 'domain'],
-    'weather-providers': ['shared', 'domain'],
+    'flight-providers': ['shared', 'domain', 'provider-http'],
+    'accommodation-providers': ['shared', 'domain', 'provider-http'],
+    'routing-providers': ['shared', 'domain', 'provider-http'],
+    'weather-providers': ['shared', 'domain', 'provider-http'],
     llm: ['shared', 'domain'],
     'search-engine': ['shared', 'domain', 'pricing', 'ranking', 'destination-engine'],
     api: [
         'shared',
         'domain',
+        'provider-http',
+        'api-contract',
         'pricing',
         'ranking',
         'destination-engine',
@@ -48,7 +52,7 @@ const ALLOWED: Record<string, readonly string[]> = {
         'search-engine',
         ...PROVIDERS,
     ],
-    web: ['shared', 'domain', 'llm', 'ranking'],
+    web: ['shared', 'domain', 'llm', 'ranking', 'api-contract'],
 };
 
 /** Extra workspace packages a package's tests may import (real adapters exercised by the engine tests). */
@@ -57,7 +61,7 @@ const ALLOWED_IN_TESTS: Record<string, readonly string[]> = {
 };
 
 /** Packages that import nothing outside the workspace and Node's built-ins. */
-const NO_THIRD_PARTY = ['shared', 'domain'];
+const NO_THIRD_PARTY = ['shared', 'domain', 'provider-http'];
 
 interface Pkg {
     readonly name: string;

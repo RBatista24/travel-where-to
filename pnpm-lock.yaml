@@ -50,6 +50,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@travel-where-to/api-contract':
+        specifier: workspace:*
+        version: link:../../packages/api-contract
       '@travel-where-to/domain':
         specifier: workspace:*
         version: link:../../packages/domain
@@ -138,6 +141,9 @@ importers:
       '@travel-where-to/domain':
         specifier: workspace:*
         version: link:../domain
+      '@travel-where-to/provider-http':
+        specifier: workspace:*
+        version: link:../provider-http
       '@travel-where-to/shared':
         specifier: workspace:*
         version: link:../shared
@@ -157,6 +163,18 @@ importers:
         specifier: workspace:*
         version: link:../shared
 
+  packages/api-contract:
+    dependencies:
+      '@travel-where-to/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@travel-where-to/shared':
+        specifier: workspace:*
+        version: link:../shared
+      zod:
+        specifier: ^3.25.0
+        version: 3.25.76
+
   packages/domain:
     dependencies:
       '@travel-where-to/shared':
@@ -168,6 +186,9 @@ importers:
       '@travel-where-to/domain':
         specifier: workspace:*
         version: link:../domain
+      '@travel-where-to/provider-http':
+        specifier: workspace:*
+        version: link:../provider-http
       '@travel-where-to/shared':
         specifier: workspace:*
         version: link:../shared
@@ -193,6 +214,12 @@ importers:
         specifier: workspace:*
         version: link:../shared
 
+  packages/provider-http:
+    dependencies:
+      '@travel-where-to/domain':
+        specifier: workspace:*
+        version: link:../domain
+
   packages/ranking:
     dependencies:
       '@travel-where-to/domain':
@@ -207,6 +234,9 @@ importers:
       '@travel-where-to/domain':
         specifier: workspace:*
         version: link:../domain
+      '@travel-where-to/provider-http':
+        specifier: workspace:*
+        version: link:../provider-http
       '@travel-where-to/shared':
         specifier: workspace:*
         version: link:../shared
@@ -252,6 +282,9 @@ importers:
       '@travel-where-to/domain':
         specifier: workspace:*
         version: link:../domain
+      '@travel-where-to/provider-http':
+        specifier: workspace:*
+        version: link:../provider-http
       '@travel-where-to/shared':
         specifier: workspace:*
         version: link:../shared
@@ -264,6 +297,9 @@ importers:
       '@travel-where-to/accommodation-providers':
         specifier: workspace:*
         version: link:../../packages/accommodation-providers
+      '@travel-where-to/api-contract':
+        specifier: workspace:*
+        version: link:../../packages/api-contract
       '@travel-where-to/destination-engine':
         specifier: workspace:*
         version: link:../../packages/destination-engine
@@ -276,6 +312,9 @@ importers:
       '@travel-where-to/llm':
         specifier: workspace:*
         version: link:../../packages/llm
+      '@travel-where-to/provider-http':
+        specifier: workspace:*
+        version: link:../../packages/provider-http
       '@travel-where-to/ranking':
         specifier: workspace:*
         version: link:../../packages/ranking

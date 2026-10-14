@@ -1,10 +1,9 @@
 import { z } from 'zod';
-import { fromMajor, isValidLocalDate } from '@travel-where-to/shared';
+import { isValidLocalDate } from '@travel-where-to/shared';
 import {
     ACCOMMODATION_FACILITIES,
     DESTINATION_ATTRIBUTES,
     REGIONS,
-    type SearchCriteria,
     type Weekday,
 } from '@travel-where-to/domain';
 
@@ -159,26 +158,7 @@ export const SearchRequestSchema = z
     })
     .strict();
 
+/** The body as sent over HTTP (before parsing). Web clients build this type. */
+export type SearchRequestInput = z.input<typeof SearchRequestSchema>;
+/** The parsed body the API works with (weekdays and defaults applied). */
 export type SearchRequest = z.infer<typeof SearchRequestSchema>;
-
-export function toCriteria(req: SearchRequest): SearchCriteria {
-    const { vehicle, ...transport } = req.transport;
-    return {
-        ...req,
-        budget: fromMajor(req.budget.amount, req.budget.currency),
-        transport: {
-            ...transport,
-            ...(vehicle
-                ? {
-                      vehicle: {
-                          ...vehicle,
-                          fuelPrice: fromMajor(
-                              vehicle.fuelPrice.amount,
-                              vehicle.fuelPrice.currency,
-                          ),
-                      },
-                  }
-                : {}),
-        },
-    };
-}

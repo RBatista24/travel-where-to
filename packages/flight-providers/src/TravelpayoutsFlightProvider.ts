@@ -9,15 +9,17 @@ import type {
 } from '@travel-where-to/domain';
 import {
     countTravellers,
-    PromiseCache,
     ProviderError,
-    providerFetchJson,
-    providerStatusError,
     TIME_OF_DAY_HOURS,
-    type FetchLike,
     type FlightPreferences,
     type TimeOfDay,
 } from '@travel-where-to/domain';
+import {
+    PromiseCache,
+    providerFetchJson,
+    providerStatusError,
+    type FetchLike,
+} from '@travel-where-to/provider-http';
 import {
     parseTickets,
     TpGroupedResponseSchema,

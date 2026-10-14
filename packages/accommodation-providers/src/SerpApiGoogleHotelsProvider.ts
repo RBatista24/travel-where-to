@@ -7,14 +7,13 @@ import type {
     AccommodationProvider,
     AccommodationSearchRequest,
 } from '@travel-where-to/domain';
+import { countTravellers, ProviderError } from '@travel-where-to/domain';
 import {
-    countTravellers,
     PromiseCache,
-    ProviderError,
     providerFetchJson,
     providerStatusError,
     type FetchLike,
-} from '@travel-where-to/domain';
+} from '@travel-where-to/provider-http';
 
 const PROVIDER = 'serpapi-google-hotels';
 

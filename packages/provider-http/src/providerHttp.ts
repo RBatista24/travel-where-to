@@ -1,4 +1,4 @@
-import { ProviderError, type ProviderErrorKind } from './ports';
+import { ProviderError, type ProviderErrorKind } from '@travel-where-to/domain';
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
 

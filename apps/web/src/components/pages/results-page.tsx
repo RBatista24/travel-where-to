@@ -4,6 +4,7 @@ import * as React from 'react';
 import { useRouter } from 'next/navigation';
 import { ChevronDownIcon } from 'lucide-react';
 import { Button } from '@/components/atoms/button';
+import { LiveRegion } from '@/components/atoms/live-region';
 import { Skeleton } from '@/components/atoms/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/atoms/tabs';
 import { BudgetPicks } from '@/components/organisms/budget-picks';
@@ -86,26 +87,31 @@ function Results({ result }: { result: SearchResult }) {
         if (next) router.push(`/results/${encodeURIComponent(next.searchId)}`);
     };
 
+    const headline =
+        result.recommendations.length === 0
+            ? 'Nothing fits every requirement'
+            : result.recommendations.length === 1
+              ? 'One trip fits'
+              : `${result.totalViable} trips fit: here are the best ${result.recommendations.length}`;
     const open = trips.find((r) => r.id === openId) ?? null;
     const featured = recs.slice(0, FEATURED);
     const rest = recs.slice(FEATURED);
 
     return (
         <ResultsLayout
-            headline={
-                result.recommendations.length === 0
-                    ? 'Nothing fits every requirement'
-                    : result.recommendations.length === 1
-                      ? 'One trip fits'
-                      : `${result.totalViable} trips fit: here are the best ${result.recommendations.length}`
-            }
+            headline={headline}
             summary={
                 <>
                     <SearchSummary searchId={result.searchId} criteria={result.criteria} />
                     <DataSources sources={result.sources} />
                 </>
             }
-            notices={<SearchNotices result={result} />}
+            notices={
+                <>
+                    <LiveRegion message={headline} />
+                    <SearchNotices result={result} />
+                </>
+            }
             overlays={
                 <>
                     <TripDetailSheet

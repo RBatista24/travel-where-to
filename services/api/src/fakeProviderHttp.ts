@@ -3,7 +3,7 @@ import {
     DESTINATION_CATALOGUE,
     PORTUGAL_DEPARTURE_AIRPORTS,
 } from '@travel-where-to/destination-engine';
-import type { FetchLike } from '@travel-where-to/domain';
+import type { FetchLike } from '@travel-where-to/provider-http';
 
 /** Answers Travelpayouts, openrouteservice and Open-Meteo requests with payloads in their documented shapes. Tests only. */
 const airports = new Map(

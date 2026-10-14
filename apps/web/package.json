@@ -12,6 +12,7 @@
     },
     "dependencies": {
         "@travel-where-to/domain": "workspace:*",
+        "@travel-where-to/api-contract": "workspace:*",
         "@travel-where-to/llm": "workspace:*",
         "@travel-where-to/ranking": "workspace:*",
         "@travel-where-to/shared": "workspace:*",

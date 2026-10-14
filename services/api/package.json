@@ -10,6 +10,8 @@
     "dependencies": {
         "@travel-where-to/shared": "workspace:*",
         "@travel-where-to/domain": "workspace:*",
+        "@travel-where-to/provider-http": "workspace:*",
+        "@travel-where-to/api-contract": "workspace:*",
         "@travel-where-to/destination-engine": "workspace:*",
         "@travel-where-to/flight-providers": "workspace:*",
         "@travel-where-to/accommodation-providers": "workspace:*",

@@ -6,4 +6,3 @@ export * from './criteria';
 export * from './offers';
 export * from './ports';
 export * from './results';
-export * from './providerHttp';
