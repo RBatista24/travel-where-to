@@ -1,12 +1,4 @@
 {
-  "packages/search-engine/src/SearchEngine.ts": {
-    "sonarjs/cognitive-complexity": {
-      "count": 3
-    },
-    "sonarjs/no-nested-conditional": {
-      "count": 2
-    }
-  },
   "packages/shared/src/dates.ts": {
     "sonarjs/redundant-type-aliases": {
       "count": 1
