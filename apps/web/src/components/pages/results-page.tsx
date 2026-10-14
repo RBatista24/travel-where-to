@@ -50,6 +50,13 @@ export function ResultsPage({ searchId }: { searchId: string }) {
     return <Results result={result.data} />;
 }
 
+function headlineFor(result: SearchResult): string {
+    const shown = result.recommendations.length;
+    if (shown === 0) return 'Nothing fits every requirement';
+    if (shown === 1) return 'One trip fits';
+    return `${result.totalViable} trips fit: here are the best ${shown}`;
+}
+
 function Results({ result }: { result: SearchResult }) {
     const router = useRouter();
     const [view, setView] = React.useState<ResultView>('MATCH');
@@ -70,9 +77,10 @@ function Results({ result }: { result: SearchResult }) {
     const [applying, setApplying] = React.useState<string | null>(null);
 
     const toggle = (id: string) =>
-        setCompare((c) =>
-            c.includes(id) ? c.filter((x) => x !== id) : c.length < MAX_COMPARE ? [...c, id] : c,
-        );
+        setCompare((c) => {
+            if (c.includes(id)) return c.filter((x) => x !== id);
+            return c.length < MAX_COMPARE ? [...c, id] : c;
+        });
     const actionsFor = (id: string) => ({
         selected: compare.includes(id),
         canSelect: compare.length < MAX_COMPARE,
@@ -87,12 +95,7 @@ function Results({ result }: { result: SearchResult }) {
         if (next) router.push(`/results/${encodeURIComponent(next.searchId)}`);
     };
 
-    const headline =
-        result.recommendations.length === 0
-            ? 'Nothing fits every requirement'
-            : result.recommendations.length === 1
-              ? 'One trip fits'
-              : `${result.totalViable} trips fit: here are the best ${result.recommendations.length}`;
+    const headline = headlineFor(result);
     const open = trips.find((r) => r.id === openId) ?? null;
     const featured = recs.slice(0, FEATURED);
     const rest = recs.slice(FEATURED);
