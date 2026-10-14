@@ -157,44 +157,51 @@ export function nightsOf(dates: DateSelection): number {
     return dates.kind === 'EXACT' ? daysBetween(dates.checkIn, dates.checkOut) : dates.nights;
 }
 
-export function validateCriteria(criteria: SearchCriteria, today: LocalDate): string[] {
-    const errors: string[] = [...validateTravellers(criteria.travellers)];
-    const d = criteria.dates;
-    if (d.kind === 'EXACT') {
-        if (!isValidLocalDate(d.checkIn) || !isValidLocalDate(d.checkOut))
-            errors.push('Invalid dates.');
-        else {
-            if (daysBetween(d.checkIn, d.checkOut) < 1)
-                errors.push('Check-out must be after check-in.');
-            if (daysBetween(today, d.checkIn) < 0) errors.push('Check-in cannot be in the past.');
-        }
-    } else {
-        if (!isValidLocalDate(d.windowStart) || !isValidLocalDate(d.windowEnd))
-            errors.push('Invalid date window.');
-        else {
-            if (d.weekdays) {
-                const ok = (xs: readonly number[]) =>
-                    xs.length > 0 && xs.every((x) => Number.isInteger(x) && x >= 0 && x <= 6);
-                if (!ok(d.weekdays.departOn) || !ok(d.weekdays.returnOn))
-                    errors.push('Pick at least one departure day and one return day.');
-                else if (
-                    daysBetween(d.windowStart, d.windowEnd) >= 0 &&
-                    enumeratePatternStays(
-                        d.windowStart,
-                        d.windowEnd,
-                        d.weekdays.departOn,
-                        d.weekdays.returnOn,
-                    ).length === 0
-                )
-                    errors.push('No trips with those days of the week fit inside the date window.');
-            } else if (!Number.isInteger(d.nights) || d.nights < 1)
-                errors.push('Nights must be a whole number ≥ 1.');
-            else if (daysBetween(d.windowStart, d.windowEnd) < d.nights)
-                errors.push('The date window is shorter than the number of nights.');
-            if (daysBetween(today, d.windowStart) < 0)
-                errors.push('The date window cannot start in the past.');
-        }
-    }
+type ExactDates = Extract<DateSelection, { kind: 'EXACT' }>;
+type FlexibleDates = Extract<DateSelection, { kind: 'FLEXIBLE' }>;
+
+function exactDateErrors(d: ExactDates, today: LocalDate): string[] {
+    if (!isValidLocalDate(d.checkIn) || !isValidLocalDate(d.checkOut)) return ['Invalid dates.'];
+    const errors: string[] = [];
+    if (daysBetween(d.checkIn, d.checkOut) < 1) errors.push('Check-out must be after check-in.');
+    if (daysBetween(today, d.checkIn) < 0) errors.push('Check-in cannot be in the past.');
+    return errors;
+}
+
+function weekdayPatternErrors(d: FlexibleDates, pattern: WeekdayPattern): string[] {
+    const ok = (xs: readonly number[]) =>
+        xs.length > 0 && xs.every((x) => Number.isInteger(x) && x >= 0 && x <= 6);
+    if (!ok(pattern.departOn) || !ok(pattern.returnOn))
+        return ['Pick at least one departure day and one return day.'];
+    const fits =
+        daysBetween(d.windowStart, d.windowEnd) >= 0 &&
+        enumeratePatternStays(d.windowStart, d.windowEnd, pattern.departOn, pattern.returnOn)
+            .length === 0;
+    return fits ? ['No trips with those days of the week fit inside the date window.'] : [];
+}
+
+function flexibleDateErrors(d: FlexibleDates, today: LocalDate): string[] {
+    if (!isValidLocalDate(d.windowStart) || !isValidLocalDate(d.windowEnd))
+        return ['Invalid date window.'];
+    const errors: string[] = [];
+    if (d.weekdays) errors.push(...weekdayPatternErrors(d, d.weekdays));
+    else if (!Number.isInteger(d.nights) || d.nights < 1)
+        errors.push('Nights must be a whole number ≥ 1.');
+    else if (daysBetween(d.windowStart, d.windowEnd) < d.nights)
+        errors.push('The date window is shorter than the number of nights.');
+    if (daysBetween(today, d.windowStart) < 0)
+        errors.push('The date window cannot start in the past.');
+    return errors;
+}
+
+function dateErrors(dates: DateSelection, today: LocalDate): string[] {
+    return dates.kind === 'EXACT'
+        ? exactDateErrors(dates, today)
+        : flexibleDateErrors(dates, today);
+}
+
+function budgetAndTransportErrors(criteria: SearchCriteria): string[] {
+    const errors: string[] = [];
     if (criteria.budget.amountMinor <= 0) errors.push('Budget must be greater than zero.');
     if (criteria.transport.modes.length === 0) errors.push('Select at least one transport mode.');
     const drv = criteria.transport.driving;
@@ -211,6 +218,11 @@ export function validateCriteria(criteria: SearchCriteria, today: LocalDate): st
         (xs ?? []).every((x) => x in TIME_OF_DAY_HOURS);
     if (fp && (!validTimes(fp.outboundTimes) || !validTimes(fp.returnTimes)))
         errors.push('Unknown flight time of day.');
+    return errors;
+}
+
+function extrasErrors(criteria: SearchCriteria): string[] {
+    const errors: string[] = [];
     const pd = criteria.parkTickets?.days;
     if (pd !== undefined && (!Number.isInteger(pd) || pd < 1 || pd > 7))
         errors.push('Park days must be between 1 and 7.');
@@ -219,4 +231,13 @@ export function validateCriteria(criteria: SearchCriteria, today: LocalDate): st
     if (criteria.destination.kind === 'KNOWN' && criteria.destination.destinationIds.length === 0)
         errors.push('Select at least one destination.');
     return errors;
+}
+
+export function validateCriteria(criteria: SearchCriteria, today: LocalDate): string[] {
+    return [
+        ...validateTravellers(criteria.travellers),
+        ...dateErrors(criteria.dates, today),
+        ...budgetAndTransportErrors(criteria),
+        ...extrasErrors(criteria),
+    ];
 }
