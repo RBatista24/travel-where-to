@@ -79,6 +79,49 @@ const TIME_WORDS: [RegExp, string][] = [
     [/\bnight flights?\b|\bovernight flights?\b|\bred[- ]eye\b|\bat night\b/, 'NIGHT'],
 ];
 
+const PLACE_KEYWORDS = [
+    [/\bdisney ?land( paris)?\b|\bdisney paris\b|\bdisneyland\b/, 'Disneyland Paris'],
+    [/\bparis\b(?! disney)/, 'Paris'],
+    [/\brome\b/, 'Rome'],
+    [/\blondon\b/, 'London'],
+    [/\bmadeira\b|\bfunchal\b/, 'Funchal'],
+    [/\bazores\b/, 'Ponta Delgada'],
+    [/\btenerife\b/, 'Costa Adeje'],
+    [/\bmarrakech\b|\bmarrakesh\b/, 'Marrakech'],
+    [/\bcape verde\b|\bcabo verde\b|\bsal island\b/, 'Cape Verde'],
+    [/\bsalvador\b|\bbahia\b/, 'Salvador'],
+    [/\bfortaleza\b/, 'Fortaleza'],
+    [/\brio( de janeiro)?\b/, 'Rio de Janeiro'],
+    [/\bpunta cana\b|\bdominican republic\b/, 'Punta Cana'],
+    [/\bcanc[uú]n\b|\briviera maya\b/, 'Cancún'],
+    [/\bvaradero\b|\bcuba\b/, 'Varadero'],
+    [/\borlando\b|\bdisney world\b/, 'Orlando'],
+    [/\bnew york\b|\bnyc\b/, 'New York'],
+    [/\bdubai\b/, 'Dubai'],
+    [/\bantalya\b/, 'Antalya'],
+    [/\bhurghada\b/, 'Hurghada'],
+    [/\bdjerba\b/, 'Djerba'],
+    [/\bzanzibar\b/, 'Zanzibar'],
+    [/\bcape town\b/, 'Cape Town'],
+    [/\bmauritius\b/, 'Mauritius'],
+    [/\bmaldives\b/, 'Maldives'],
+    [/\bphuket\b/, 'Phuket'],
+    [/\bbali\b/, 'Bali'],
+] as const;
+
+const REGION_RULES: [RegExp, string[]][] = [
+    [
+        /\b(outside (of )?europe|out of europe|long[- ]haul|far away|another continent|intercontinental)\b/,
+        ['AFRICA', 'AMERICAS', 'MIDDLE_EAST', 'ASIA_PACIFIC', 'INDIAN_OCEAN'],
+    ],
+    [/\b(in europe|within europe|european)\b/, ['EUROPE']],
+    [/\b(caribbean|brazil|mexico|america|americas|usa|united states|cuba)\b/, ['AMERICAS']],
+    [/\b(africa|african|egypt|cape verde|zanzibar|tunisia)\b/, ['AFRICA']],
+    [/\b(asia|asian|thailand|bali|indonesia)\b/, ['ASIA_PACIFIC']],
+    [/\b(middle east|dubai|turkey)\b/, ['MIDDLE_EAST']],
+    [/\b(indian ocean|maldives|mauritius|seychelles)\b/, ['INDIAN_OCEAN']],
+];
+
 const num = (s: string): number => NUMBER_WORDS[s] ?? Number(s);
 
 function priorityFor(clause: string): RequirementPriority {
@@ -87,6 +130,208 @@ function priorityFor(clause: string): RequirementPriority {
     if (/\b(ideally|would like|nice to have|maybe|if possible|prefer)\b/.test(clause))
         return 'PREFERRED';
     return 'IMPORTANT';
+}
+
+type Requirement = {
+    kind: string;
+    attribute?: string;
+    facility?: string;
+    priority: RequirementPriority;
+};
+
+function addFacilities(
+    clause: string,
+    priority: RequirementPriority,
+    requirements: Requirement[],
+    seen: Set<string>,
+): boolean {
+    let matched = false;
+    for (const [re, facility] of FACILITY_KEYWORDS) {
+        if (re.test(clause) && !seen.has(`f:${facility}`)) {
+            seen.add(`f:${facility}`);
+            requirements.push({ kind: 'FACILITY', facility, priority });
+            matched = true;
+        }
+    }
+    return matched;
+}
+
+function addAttributes(
+    clause: string,
+    priority: RequirementPriority,
+    requirements: Requirement[],
+    seen: Set<string>,
+): boolean {
+    let matched = false;
+    for (const [re, attribute] of ATTRIBUTE_KEYWORDS) {
+        // "family room" is a facility, not a family destination.
+        if (attribute === 'family' && /family rooms?/.test(clause)) continue;
+        if (re.test(clause) && !seen.has(`a:${attribute}`)) {
+            seen.add(`a:${attribute}`);
+            requirements.push({ kind: 'DESTINATION', attribute, priority });
+            matched = true;
+        }
+    }
+    return matched;
+}
+
+function isStructured(clause: string): boolean {
+    return (
+        /[€°]/.test(clause) ||
+        mentionsStructuredTerm(clause) ||
+        MONTHS.some((m) => clause.includes(m))
+    );
+}
+
+function requirementsFor(clauses: string[]): {
+    requirements: Requirement[];
+    unmapped: string[];
+} {
+    const requirements: Requirement[] = [];
+    const seen = new Set<string>();
+    const unmapped: string[] = [];
+
+    for (const clause of clauses) {
+        const priority = priorityFor(clause);
+        const facility = addFacilities(clause, priority, requirements, seen);
+        const attribute = addAttributes(clause, priority, requirements, seen);
+        const matched = facility || attribute;
+        if (!matched && !isStructured(clause) && clause.split(' ').length > 1) {
+            unmapped.push(clause);
+        }
+    }
+    return { requirements, unmapped };
+}
+
+function budgetAndPartyFields(text: string): Record<string, unknown> {
+    const out: Record<string, unknown> = {};
+    const amount = statedBudget(text);
+    if (amount !== undefined) out.budget = { amount, currency: 'EUR' };
+
+    const nights = /\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten) nights?\b/.exec(text);
+    if (nights?.[1]) out.nights = num(nights[1]);
+
+    const adults = /\b(\d+|one|two|three|four|five|six) adults?\b/.exec(text);
+    if (adults?.[1]) out.adults = num(adults[1]);
+    else if (/\b(we are a couple|my partner|my wife|my husband|two of us)\b/.test(text))
+        out.adults = 2;
+
+    const ages = [
+        ...text.matchAll(/\b(?:aged?|age) (\d{1,2})\b|\b(\d{1,2})[- ]?(?:year[- ]old|yo)\b/g),
+    ].map((m) => Number(m[1] ?? m[2]));
+    if (ages.length > 0) out.childAges = ages.filter((a) => a <= 17);
+    return out;
+}
+
+function dateWindowFields(text: string, today: () => Date): Record<string, unknown> {
+    const month = MONTHS.findIndex((m) => new RegExp(`\\b${m}\\b`).test(text));
+    if (month < 0) return {};
+
+    const now = today();
+    const year = month < now.getUTCMonth() ? now.getUTCFullYear() + 1 : now.getUTCFullYear();
+    const start = new Date(Date.UTC(year, month, 1));
+    const end = new Date(Date.UTC(year, month + 1, 0));
+    return {
+        dateWindow: {
+            start: start.toISOString().slice(0, 10),
+            end: end.toISOString().slice(0, 10),
+        },
+    };
+}
+
+function transportFields(text: string): Record<string, unknown> {
+    const out: Record<string, unknown> = {};
+    const drive =
+        /\b(?:max(?:imum)?|up to|no more than|less than|at most)\s+(\d+(?:\.\d+)?)\s*h(?:ours?)?\b(?=[^,.;]*driv)/.exec(
+            text,
+        );
+    if (drive?.[1]) out.maxDrivingHours = Number(drive[1]);
+    if (/\b(don'?t want to fly|no fl(y|ights?)|not fly|without flying)\b/.test(text))
+        out.transportModes = ['CAR'];
+    else if (/\b(no car|don'?t want to drive|not drive)\b/.test(text))
+        out.transportModes = ['FLIGHT'];
+    return out;
+}
+
+function destinationFields(text: string): Record<string, unknown> {
+    const out: Record<string, unknown> = {};
+    const names = PLACE_KEYWORDS.filter(([re]) => re.test(text)).map(([, n]) => n);
+    // "Disneyland Paris" also matches "paris": keep the more specific one.
+    const destinationNames = names.includes('Disneyland Paris')
+        ? names.filter((n) => n !== 'Paris' || /\bparis\b.*\bparis\b/.test(text))
+        : names;
+    if (destinationNames.length) out.destinationNames = destinationNames;
+
+    if (
+        /\b(inside|in) the (park|resort)\b|\b(official|disney) hotels?\b|\bon[- ]site hotel/.test(
+            text,
+        )
+    )
+        out.parkHotelsOnly = true;
+
+    const parkDays =
+        /\b(\d|one|two|three|four|five) (?:park )?days? (?:in|at) the parks?\b/.exec(text) ??
+        /\b(\d|one|two|three|four|five)[- ]day (?:park )?tickets?\b/.exec(text);
+    if (parkDays?.[1]) out.parkDays = num(parkDays[1]);
+    return out;
+}
+
+function regionFields(text: string): Record<string, unknown> {
+    const regions = new Set<string>();
+    for (const [re, found] of REGION_RULES) {
+        if (re.test(text)) found.forEach((r) => regions.add(r));
+    }
+    return regions.size ? { regions: [...regions] } : {};
+}
+
+function directFlightFields(text: string): Record<string, unknown> {
+    const direct =
+        /\b(direct|non[- ]?stop) (flights?|only)\b|\bonly direct\b|\bno (stops|layovers|connections)\b|\bwithout (stops|layovers)\b/.test(
+            text,
+        );
+    return direct ? { directFlightsOnly: true } : {};
+}
+
+/** Departure times per leg. "Morning flights" with no direction applies to both legs. */
+function flightTimeFields(clauses: string[]): Record<string, unknown> {
+    const outTimes = new Set<string>();
+    const backTimes = new Set<string>();
+    for (const clause of clauses) {
+        const times = TIME_WORDS.filter(([re]) => re.test(clause)).map(([, t]) => t);
+        if (times.length === 0) continue;
+        const isReturn = /\b(return|back|home|coming back|inbound)\b/.test(clause);
+        const isOut = /\b(leave|leaving|depart|departing|outbound|go|going|fly out|there)\b/.test(
+            clause,
+        );
+        const aboutFlights = isReturn || isOut || /\b(fly|flights?)\b/.test(clause);
+        if (!aboutFlights) continue;
+        if (isReturn || !isOut) times.forEach((t) => backTimes.add(t));
+        if (isOut || !isReturn) times.forEach((t) => outTimes.add(t));
+    }
+    const out: Record<string, unknown> = {};
+    if (outTimes.size) out.outboundTimes = [...outTimes];
+    if (backTimes.size) out.returnTimes = [...backTimes];
+    return out;
+}
+
+/** Days of the week (flexible windows). */
+function weekdayFields(text: string): Record<string, unknown> {
+    const span = new RegExp(
+        `\\b${DAY}\\w*\\s*(?:to|until|till|through|-|–|→|and back(?: on)?|back on|return(?:ing)? on)\\s*${DAY}\\b`,
+    ).exec(text);
+    const from = span?.[1] ? weekday(span[1]) : undefined;
+    const to = span?.[2] ? weekday(span[2]) : undefined;
+    if (from !== undefined && to !== undefined) return { departOn: [from], returnOn: [to] };
+    if (/\blong weekends?\b/.test(text)) return { departOn: [5], returnOn: [1] };
+    if (/\bweekends?\b/.test(text)) return { departOn: [5], returnOn: [0] };
+    return {};
+}
+
+function temperatureFields(text: string): Record<string, unknown> {
+    const temp = /(\d{2})\s?(?:°c?|degrees)/.exec(text);
+    if (temp?.[1]) return { minAvgHighC: Number(temp[1]) };
+    if (/\b(warm|hot|sunny)\b|\b(the|some) sun\b/.test(text)) return { minAvgHighC: 20 };
+    return {};
 }
 
 export class MockLlmProvider implements LlmProvider {
@@ -101,198 +346,19 @@ export class MockLlmProvider implements LlmProvider {
             .map((c) => c.trim())
             .filter(Boolean);
 
-        const requirements: {
-            kind: string;
-            attribute?: string;
-            facility?: string;
-            priority: RequirementPriority;
-        }[] = [];
-        const seen = new Set<string>();
-        const unmapped: string[] = [];
-
-        for (const clause of clauses) {
-            let matched = false;
-            const priority = priorityFor(clause);
-            for (const [re, facility] of FACILITY_KEYWORDS) {
-                if (re.test(clause) && !seen.has(`f:${facility}`)) {
-                    seen.add(`f:${facility}`);
-                    requirements.push({ kind: 'FACILITY', facility, priority });
-                    matched = true;
-                }
-            }
-            for (const [re, attribute] of ATTRIBUTE_KEYWORDS) {
-                // "family room" is a facility, not a family destination.
-                if (attribute === 'family' && /family rooms?/.test(clause)) continue;
-                if (re.test(clause) && !seen.has(`a:${attribute}`)) {
-                    seen.add(`a:${attribute}`);
-                    requirements.push({ kind: 'DESTINATION', attribute, priority });
-                    matched = true;
-                }
-            }
-            const structured =
-                /[€°]/.test(clause) ||
-                mentionsStructuredTerm(clause) ||
-                MONTHS.some((m) => clause.includes(m));
-            if (!matched && !structured && clause.split(' ').length > 1) unmapped.push(clause);
-        }
-
-        const out: Record<string, unknown> = { requirements, unmapped };
-
-        const amount = statedBudget(text);
-        if (amount !== undefined) out.budget = { amount, currency: 'EUR' };
-        const nights = /\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten) nights?\b/.exec(
-            text,
+        return Object.assign(
+            {},
+            requirementsFor(clauses),
+            budgetAndPartyFields(text),
+            dateWindowFields(text, this.today),
+            transportFields(text),
+            destinationFields(text),
+            regionFields(text),
+            directFlightFields(text),
+            flightTimeFields(clauses),
+            weekdayFields(text),
+            temperatureFields(text),
         );
-        if (nights?.[1]) out.nights = num(nights[1]);
-        const adults = /\b(\d+|one|two|three|four|five|six) adults?\b/.exec(text);
-        if (adults?.[1]) out.adults = num(adults[1]);
-        else if (/\b(we are a couple|my partner|my wife|my husband|two of us)\b/.test(text))
-            out.adults = 2;
-
-        const ages = [
-            ...text.matchAll(/\b(?:aged?|age) (\d{1,2})\b|\b(\d{1,2})[- ]?(?:year[- ]old|yo)\b/g),
-        ].map((m) => Number(m[1] ?? m[2]));
-        if (ages.length > 0) out.childAges = ages.filter((a) => a <= 17);
-
-        const month = MONTHS.findIndex((m) => new RegExp(`\\b${m}\\b`).test(text));
-        if (month >= 0) {
-            const now = this.today();
-            const year =
-                month < now.getUTCMonth() ? now.getUTCFullYear() + 1 : now.getUTCFullYear();
-            const start = new Date(Date.UTC(year, month, 1));
-            const end = new Date(Date.UTC(year, month + 1, 0));
-            out.dateWindow = {
-                start: start.toISOString().slice(0, 10),
-                end: end.toISOString().slice(0, 10),
-            };
-        }
-
-        const drive =
-            /\b(?:max(?:imum)?|up to|no more than|less than|at most)\s+(\d+(?:\.\d+)?)\s*h(?:ours?)?\b(?=[^,.;]*driv)/.exec(
-                text,
-            );
-        if (drive?.[1]) out.maxDrivingHours = Number(drive[1]);
-        if (/\b(don'?t want to fly|no fl(y|ights?)|not fly|without flying)\b/.test(text))
-            out.transportModes = ['CAR'];
-        else if (/\b(no car|don'?t want to drive|not drive)\b/.test(text))
-            out.transportModes = ['FLIGHT'];
-
-        const places = [
-            [/\bdisney ?land( paris)?\b|\bdisney paris\b|\bdisneyland\b/, 'Disneyland Paris'],
-            [/\bparis\b(?! disney)/, 'Paris'],
-            [/\brome\b/, 'Rome'],
-            [/\blondon\b/, 'London'],
-            [/\bmadeira\b|\bfunchal\b/, 'Funchal'],
-            [/\bazores\b/, 'Ponta Delgada'],
-            [/\btenerife\b/, 'Costa Adeje'],
-            [/\bmarrakech\b|\bmarrakesh\b/, 'Marrakech'],
-            [/\bcape verde\b|\bcabo verde\b|\bsal island\b/, 'Cape Verde'],
-            [/\bsalvador\b|\bbahia\b/, 'Salvador'],
-            [/\bfortaleza\b/, 'Fortaleza'],
-            [/\brio( de janeiro)?\b/, 'Rio de Janeiro'],
-            [/\bpunta cana\b|\bdominican republic\b/, 'Punta Cana'],
-            [/\bcanc[uú]n\b|\briviera maya\b/, 'Cancún'],
-            [/\bvaradero\b|\bcuba\b/, 'Varadero'],
-            [/\borlando\b|\bdisney world\b/, 'Orlando'],
-            [/\bnew york\b|\bnyc\b/, 'New York'],
-            [/\bdubai\b/, 'Dubai'],
-            [/\bantalya\b/, 'Antalya'],
-            [/\bhurghada\b/, 'Hurghada'],
-            [/\bdjerba\b/, 'Djerba'],
-            [/\bzanzibar\b/, 'Zanzibar'],
-            [/\bcape town\b/, 'Cape Town'],
-            [/\bmauritius\b/, 'Mauritius'],
-            [/\bmaldives\b/, 'Maldives'],
-            [/\bphuket\b/, 'Phuket'],
-            [/\bbali\b/, 'Bali'],
-        ] as const;
-        const names = places.filter(([re]) => re.test(text)).map(([, n]) => n);
-        // "Disneyland Paris" also matches "paris": keep the more specific one.
-        const destinationNames = names.includes('Disneyland Paris')
-            ? names.filter((n) => n !== 'Paris' || /\bparis\b.*\bparis\b/.test(text))
-            : names;
-        if (destinationNames.length) out.destinationNames = destinationNames;
-        if (
-            /\b(inside|in) the (park|resort)\b|\b(official|disney) hotels?\b|\bon[- ]site hotel/.test(
-                text,
-            )
-        )
-            out.parkHotelsOnly = true;
-        const parkDays =
-            /\b(\d|one|two|three|four|five) (?:park )?days? (?:in|at) the parks?\b/.exec(text) ??
-            /\b(\d|one|two|three|four|five)[- ]day (?:park )?tickets?\b/.exec(text);
-        if (parkDays?.[1]) out.parkDays = num(parkDays[1]);
-
-        // ---- Where in the world ----
-        const regions = new Set<string>();
-        if (
-            /\b(outside (of )?europe|out of europe|long[- ]haul|far away|another continent|intercontinental)\b/.test(
-                text,
-            )
-        )
-            ['AFRICA', 'AMERICAS', 'MIDDLE_EAST', 'ASIA_PACIFIC', 'INDIAN_OCEAN'].forEach((r) =>
-                regions.add(r),
-            );
-        if (/\b(in europe|within europe|european)\b/.test(text)) regions.add('EUROPE');
-        if (/\b(caribbean|brazil|mexico|america|americas|usa|united states|cuba)\b/.test(text))
-            regions.add('AMERICAS');
-        if (/\b(africa|african|egypt|cape verde|zanzibar|tunisia)\b/.test(text))
-            regions.add('AFRICA');
-        if (/\b(asia|asian|thailand|bali|indonesia)\b/.test(text)) regions.add('ASIA_PACIFIC');
-        if (/\b(middle east|dubai|turkey)\b/.test(text)) regions.add('MIDDLE_EAST');
-        if (/\b(indian ocean|maldives|mauritius|seychelles)\b/.test(text))
-            regions.add('INDIAN_OCEAN');
-        if (regions.size) out.regions = [...regions];
-
-        // ---- Flights: direct only, departure times per leg ----
-        if (
-            /\b(direct|non[- ]?stop) (flights?|only)\b|\bonly direct\b|\bno (stops|layovers|connections)\b|\bwithout (stops|layovers)\b/.test(
-                text,
-            )
-        )
-            out.directFlightsOnly = true;
-        const outTimes = new Set<string>();
-        const backTimes = new Set<string>();
-        for (const clause of clauses) {
-            const times = TIME_WORDS.filter(([re]) => re.test(clause)).map(([, t]) => t);
-            if (times.length === 0) continue;
-            const isReturn = /\b(return|back|home|coming back|inbound)\b/.test(clause);
-            const isOut =
-                /\b(leave|leaving|depart|departing|outbound|go|going|fly out|there)\b/.test(clause);
-            const aboutFlights = isReturn || isOut || /\b(fly|flights?)\b/.test(clause);
-            if (!aboutFlights) continue;
-            if (isReturn) times.forEach((t) => backTimes.add(t));
-            if (isOut || !isReturn) {
-                times.forEach((t) => outTimes.add(t));
-                // "morning flights" with no direction applies to both legs.
-                if (!isOut) times.forEach((t) => backTimes.add(t));
-            }
-        }
-        if (outTimes.size) out.outboundTimes = [...outTimes];
-        if (backTimes.size) out.returnTimes = [...backTimes];
-
-        // ---- Days of the week (flexible windows) ----
-        const span = new RegExp(
-            `\\b${DAY}\\w*\\s*(?:to|until|till|through|-|–|→|and back(?: on)?|back on|return(?:ing)? on)\\s*${DAY}\\b`,
-        ).exec(text);
-        const from = span?.[1] ? weekday(span[1]) : undefined;
-        const to = span?.[2] ? weekday(span[2]) : undefined;
-        if (from !== undefined && to !== undefined) {
-            out.departOn = [from];
-            out.returnOn = [to];
-        } else if (/\blong weekends?\b/.test(text)) {
-            out.departOn = [5];
-            out.returnOn = [1];
-        } else if (/\bweekends?\b/.test(text)) {
-            out.departOn = [5];
-            out.returnOn = [0];
-        }
-
-        const temp = /(\d{2})\s?(?:°c?|degrees)/.exec(text);
-        if (temp?.[1]) out.minAvgHighC = Number(temp[1]);
-        else if (/\b(warm|hot|sunny)\b|\b(the|some) sun\b/.test(text)) out.minAvgHighC = 20;
-
-        return out;
     }
 
     async explainRecommendation(input: ExplanationInput): Promise<string> {
