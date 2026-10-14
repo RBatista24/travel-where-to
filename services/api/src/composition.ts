@@ -100,6 +100,124 @@ export function checkedKey(name: string, v: string): string {
     return v;
 }
 
+function pickChoice(env: Env, key: string): string {
+    return (env[key] ?? 'mock').trim().toLowerCase();
+}
+
+function serpGlOf(env: Env): string {
+    return env.SERPAPI_GL?.trim() || 'pt';
+}
+
+/** Explicit ACCOMMODATION_PROVIDER, else LiteAPI when its key is set, else mock. */
+function accommodationChoice(env: Env): string {
+    if (env.ACCOMMODATION_PROVIDER?.trim()) return pickChoice(env, 'ACCOMMODATION_PROVIDER');
+    if (value(env, 'LITEAPI_KEY')) return 'liteapi';
+    return 'mock';
+}
+
+/** Explicit FLIGHT_VERIFIER, else SerpApi when its key is set, else none. */
+function verifierChoice(env: Env): string {
+    if (env.FLIGHT_VERIFIER?.trim()) return env.FLIGHT_VERIFIER.trim().toLowerCase();
+    if (value(env, 'SERPAPI_KEY')) return 'serpapi';
+    return 'none';
+}
+
+function flightsFromEnv(env: Env, clock: Clock, mock: FlightProvider): FlightProvider {
+    switch (pickChoice(env, 'FLIGHT_PROVIDER')) {
+        case 'mock':
+            return mock;
+        case 'travelpayouts': {
+            const tp = new TravelpayoutsFlightProvider({
+                token: required(env, 'TRAVELPAYOUTS_TOKEN', 'FLIGHT_PROVIDER=travelpayouts'),
+                market: env.TRAVELPAYOUTS_MARKET?.trim() || 'pt',
+                clock,
+                ...(env.TRAVELPAYOUTS_MARKER?.trim()
+                    ? { marker: env.TRAVELPAYOUTS_MARKER.trim() }
+                    : {}),
+            });
+            // The cache only has recently searched trips; without a price we estimate (labelled) instead of dropping the place.
+            return (env.FLIGHT_ESTIMATE_FALLBACK ?? 'true').trim().toLowerCase() === 'false'
+                ? tp
+                : new EstimatedFlightFallback(tp, { airports: ALL_AIRPORTS, clock });
+        }
+        default:
+            throw new Error(`Unknown FLIGHT_PROVIDER: ${env.FLIGHT_PROVIDER}`);
+    }
+}
+
+function routingFromEnv(env: Env, mock: RoutingProvider): RoutingProvider {
+    switch (pickChoice(env, 'ROUTING_PROVIDER')) {
+        case 'mock':
+            return mock;
+        case 'openrouteservice':
+            return new OpenRouteServiceRoutingProvider({
+                apiKey: required(env, 'ORS_API_KEY', 'ROUTING_PROVIDER=openrouteservice'),
+                ...(env.TOLL_RATE_EUR_PER_KM
+                    ? { tollPerKm: fromMajor(Number(env.TOLL_RATE_EUR_PER_KM), 'EUR') }
+                    : {}),
+            });
+        default:
+            throw new Error(`Unknown ROUTING_PROVIDER: ${env.ROUTING_PROVIDER}`);
+    }
+}
+
+function weatherFromEnv(env: Env, clock: Clock, mock: WeatherProvider): WeatherProvider {
+    switch (pickChoice(env, 'WEATHER_PROVIDER')) {
+        case 'mock':
+            return mock;
+        case 'open-meteo':
+            return new OpenMeteoWeatherProvider({
+                clock,
+                ...(env.OPEN_METEO_API_KEY?.trim()
+                    ? { apiKey: env.OPEN_METEO_API_KEY.trim() }
+                    : {}),
+            });
+        default:
+            throw new Error(`Unknown WEATHER_PROVIDER: ${env.WEATHER_PROVIDER}`);
+    }
+}
+
+function accommodationFromEnv(
+    env: Env,
+    clock: Clock,
+    mock: AccommodationProvider,
+): AccommodationProvider {
+    switch (accommodationChoice(env)) {
+        case 'mock':
+            return mock;
+        case 'liteapi':
+            return new LiteApiAccommodationProvider({
+                apiKey: required(env, 'LITEAPI_KEY', 'ACCOMMODATION_PROVIDER=liteapi'),
+                clock,
+            });
+        case 'serpapi':
+            return new SerpApiGoogleHotelsProvider({
+                apiKey: required(env, 'SERPAPI_KEY', 'ACCOMMODATION_PROVIDER=serpapi'),
+                gl: serpGlOf(env),
+                clock,
+            });
+        default:
+            throw new Error(`Unknown ACCOMMODATION_PROVIDER: ${env.ACCOMMODATION_PROVIDER}`);
+    }
+}
+
+function flightVerifierFromEnv(env: Env, clock: Clock): LiveFlightProvider | undefined {
+    switch (verifierChoice(env)) {
+        case 'none':
+        case '':
+            return undefined;
+        case 'serpapi':
+            return new SerpApiGoogleFlightsProvider({
+                apiKey: required(env, 'SERPAPI_KEY', 'FLIGHT_VERIFIER=serpapi'),
+                gl: serpGlOf(env),
+                pricePerPerson: env.SERPAPI_PRICE_PER_PERSON?.trim().toLowerCase() === 'true',
+                clock,
+            });
+        default:
+            throw new Error(`Unknown FLIGHT_VERIFIER: ${env.FLIGHT_VERIFIER}`);
+    }
+}
+
 /**
  * Picks each provider from environment variables. Anything not configured stays a mock,
  * and every search result says which sources were real (`sources`).
@@ -112,114 +230,11 @@ export function checkedKey(name: string, v: string): string {
  */
 export function providersFromEnv(env: Env, clock: Clock = systemClock): Providers {
     const mocks = mockProviders(clock);
-    const pick = (key: string) => (env[key] ?? 'mock').trim().toLowerCase();
-
-    let flights: FlightProvider = mocks.flights;
-    switch (pick('FLIGHT_PROVIDER')) {
-        case 'mock':
-            break;
-        case 'travelpayouts': {
-            const tp = new TravelpayoutsFlightProvider({
-                token: required(env, 'TRAVELPAYOUTS_TOKEN', 'FLIGHT_PROVIDER=travelpayouts'),
-                market: env.TRAVELPAYOUTS_MARKET?.trim() || 'pt',
-                clock,
-                ...(env.TRAVELPAYOUTS_MARKER?.trim()
-                    ? { marker: env.TRAVELPAYOUTS_MARKER.trim() }
-                    : {}),
-            });
-            // The cache only has recently searched trips; without a price we estimate (labelled) instead of dropping the place.
-            flights =
-                (env.FLIGHT_ESTIMATE_FALLBACK ?? 'true').trim().toLowerCase() === 'false'
-                    ? tp
-                    : new EstimatedFlightFallback(tp, { airports: ALL_AIRPORTS, clock });
-            break;
-        }
-        default:
-            throw new Error(`Unknown FLIGHT_PROVIDER: ${env.FLIGHT_PROVIDER}`);
-    }
-
-    let routing: RoutingProvider = mocks.routing;
-    switch (pick('ROUTING_PROVIDER')) {
-        case 'mock':
-            break;
-        case 'openrouteservice':
-            routing = new OpenRouteServiceRoutingProvider({
-                apiKey: required(env, 'ORS_API_KEY', 'ROUTING_PROVIDER=openrouteservice'),
-                ...(env.TOLL_RATE_EUR_PER_KM
-                    ? { tollPerKm: fromMajor(Number(env.TOLL_RATE_EUR_PER_KM), 'EUR') }
-                    : {}),
-            });
-            break;
-        default:
-            throw new Error(`Unknown ROUTING_PROVIDER: ${env.ROUTING_PROVIDER}`);
-    }
-
-    let weather: WeatherProvider = mocks.weather;
-    switch (pick('WEATHER_PROVIDER')) {
-        case 'mock':
-            break;
-        case 'open-meteo':
-            weather = new OpenMeteoWeatherProvider({
-                clock,
-                ...(env.OPEN_METEO_API_KEY?.trim()
-                    ? { apiKey: env.OPEN_METEO_API_KEY.trim() }
-                    : {}),
-            });
-            break;
-        default:
-            throw new Error(`Unknown WEATHER_PROVIDER: ${env.WEATHER_PROVIDER}`);
-    }
-
-    const serpGl = env.SERPAPI_GL?.trim() || 'pt';
-    let accommodation: AccommodationProvider = mocks.accommodation;
-    // With a LiteAPI key and no explicit choice, use LiteAPI.
-    const stays = env.ACCOMMODATION_PROVIDER?.trim()
-        ? pick('ACCOMMODATION_PROVIDER')
-        : value(env, 'LITEAPI_KEY')
-          ? 'liteapi'
-          : 'mock';
-    switch (stays) {
-        case 'mock':
-            break;
-        case 'liteapi':
-            accommodation = new LiteApiAccommodationProvider({
-                apiKey: required(env, 'LITEAPI_KEY', 'ACCOMMODATION_PROVIDER=liteapi'),
-                clock,
-            });
-            break;
-        case 'serpapi':
-            accommodation = new SerpApiGoogleHotelsProvider({
-                apiKey: required(env, 'SERPAPI_KEY', 'ACCOMMODATION_PROVIDER=serpapi'),
-                gl: serpGl,
-                clock,
-            });
-            break;
-        default:
-            throw new Error(`Unknown ACCOMMODATION_PROVIDER: ${env.ACCOMMODATION_PROVIDER}`);
-    }
-
-    let flightVerifier: LiveFlightProvider | undefined;
-    // With a SerpApi key and no explicit choice, check the top flights live.
-    const verifier = env.FLIGHT_VERIFIER?.trim()
-        ? env.FLIGHT_VERIFIER.trim().toLowerCase()
-        : value(env, 'SERPAPI_KEY')
-          ? 'serpapi'
-          : 'none';
-    switch (verifier) {
-        case 'none':
-        case '':
-            break;
-        case 'serpapi':
-            flightVerifier = new SerpApiGoogleFlightsProvider({
-                apiKey: required(env, 'SERPAPI_KEY', 'FLIGHT_VERIFIER=serpapi'),
-                gl: serpGl,
-                pricePerPerson: env.SERPAPI_PRICE_PER_PERSON?.trim().toLowerCase() === 'true',
-                clock,
-            });
-            break;
-        default:
-            throw new Error(`Unknown FLIGHT_VERIFIER: ${env.FLIGHT_VERIFIER}`);
-    }
+    const flights = flightsFromEnv(env, clock, mocks.flights);
+    const routing = routingFromEnv(env, mocks.routing);
+    const weather = weatherFromEnv(env, clock, mocks.weather);
+    const accommodation = accommodationFromEnv(env, clock, mocks.accommodation);
+    const flightVerifier = flightVerifierFromEnv(env, clock);
     return {
         flights,
         accommodation,
