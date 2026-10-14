@@ -112,13 +112,20 @@ export function DescribeTripBox({
     );
 }
 
-function IntentSummary({ intent, places }: { intent: TravelIntent; places: string[] }) {
+/** Who and where, in the order the summary shows it. */
+function stayFacts(intent: TravelIntent, places: string[]): string[] {
     const facts: string[] = [];
     if (places.length) facts.push(`Going to ${places.join(', ')}`);
     if (intent.regions?.length) facts.push(describeRegions(intent.regions) || 'Anywhere');
     if (intent.parkHotelsOnly) facts.push("Only the park's official hotels");
     if (intent.parkDays)
         facts.push(`${intent.parkDays} day${intent.parkDays === 1 ? '' : 's'} in the park`);
+    return facts;
+}
+
+/** Budget, length and party. */
+function travellerFacts(intent: TravelIntent): string[] {
+    const facts: string[] = [];
     if (intent.budget) facts.push(`Budget €${intent.budget.amount.toLocaleString('en-IE')}`);
     if (intent.nights) facts.push(`${intent.nights} nights`);
     if (intent.adults) facts.push(`${intent.adults} adult${intent.adults === 1 ? '' : 's'}`);
@@ -127,6 +134,12 @@ function IntentSummary({ intent, places }: { intent: TravelIntent; places: strin
         facts.push(
             `Between ${formatDate(intent.dateWindow.start)} and ${formatDate(intent.dateWindow.end)}`,
         );
+    return facts;
+}
+
+/** How they travel, and when. */
+function travelFacts(intent: TravelIntent): string[] {
+    const facts: string[] = [];
     if (intent.transportModes)
         facts.push(intent.transportModes.includes('FLIGHT') ? 'Flights only' : 'By car only');
     if (intent.maxDrivingHours) facts.push(`Drive at most ${intent.maxDrivingHours}h`);
@@ -139,6 +152,11 @@ function IntentSummary({ intent, places }: { intent: TravelIntent; places: strin
             `Travel ${describeWeekdays({ departOn: intent.departOn, returnOn: intent.returnOn })}`,
         );
     if (intent.minAvgHighC !== undefined) facts.push(`At least ${intent.minAvgHighC}°C`);
+    return facts;
+}
+
+function IntentSummary({ intent, places }: { intent: TravelIntent; places: string[] }) {
+    const facts = [...stayFacts(intent, places), ...travellerFacts(intent), ...travelFacts(intent)];
     return (
         <div className="grid gap-2 text-sm">
             {facts.length > 0 && <p>{facts.join(' · ')}</p>}
