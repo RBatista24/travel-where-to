@@ -1,12 +1,4 @@
 {
-  "packages/accommodation-providers/src/MockAccommodationProvider.ts": {
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    },
-    "sonarjs/no-nested-conditional": {
-      "count": 2
-    }
-  },
   "packages/accommodation-providers/src/SerpApiGoogleHotelsProvider.ts": {
     "sonarjs/cognitive-complexity": {
       "count": 1
