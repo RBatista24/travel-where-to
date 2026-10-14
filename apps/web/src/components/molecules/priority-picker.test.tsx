@@ -9,7 +9,7 @@ describe('PriorityPicker', () => {
         const { container } = render(
             <PriorityPicker label="Beach" value="IMPORTANT" onChange={() => {}} />,
         );
-        expect(screen.getByRole('group', { name: 'Priority for Beach' })).toBeInTheDocument();
+        expect(screen.getByRole('radiogroup', { name: 'Priority for Beach' })).toBeInTheDocument();
         expect(screen.getByRole('radio', { name: 'Important' })).toBeChecked();
         expect(screen.getByRole('radio', { name: 'Must have' })).not.toBeChecked();
         expect(await a11yViolations(container)).toEqual([]);
