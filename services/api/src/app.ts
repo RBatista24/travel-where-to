@@ -2,7 +2,8 @@ import { createServer, type IncomingMessage, type Server, type ServerResponse } 
 import { DESTINATION_ATTRIBUTES, type Destination } from '@travel-where-to/domain';
 import type { DestinationRepository } from '@travel-where-to/destination-engine';
 import { SearchValidationError, type SearchEngine } from '@travel-where-to/search-engine';
-import { SearchRequestSchema, toCriteria } from './schema';
+import { SearchRequestSchema } from '@travel-where-to/api-contract';
+import { toCriteria } from './toCriteria';
 import type { SearchRepository } from './searchRepository';
 import { interpretTravelRequest, LlmOutputError, type LlmProvider } from '@travel-where-to/llm';
 import { z } from 'zod';

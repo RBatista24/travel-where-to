@@ -30,6 +30,7 @@ const ALLOWED: Record<string, readonly string[]> = {
     shared: [],
     domain: ['shared'],
     'provider-http': ['domain'],
+    'api-contract': ['shared', 'domain'],
     pricing: ['shared', 'domain'],
     ranking: ['shared', 'domain'],
     'destination-engine': ['shared', 'domain', 'ranking'],
@@ -43,6 +44,7 @@ const ALLOWED: Record<string, readonly string[]> = {
         'shared',
         'domain',
         'provider-http',
+        'api-contract',
         'pricing',
         'ranking',
         'destination-engine',
@@ -50,7 +52,7 @@ const ALLOWED: Record<string, readonly string[]> = {
         'search-engine',
         ...PROVIDERS,
     ],
-    web: ['shared', 'domain', 'llm', 'ranking'],
+    web: ['shared', 'domain', 'llm', 'ranking', 'api-contract'],
 };
 
 /** Extra workspace packages a package's tests may import (real adapters exercised by the engine tests). */
