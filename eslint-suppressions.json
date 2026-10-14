@@ -1,19 +1,4 @@
 {
-  "apps/web/src/components/molecules/form-field.tsx": {
-    "sonarjs/no-nested-conditional": {
-      "count": 2
-    }
-  },
-  "apps/web/src/components/molecules/freshness.tsx": {
-    "sonarjs/no-nested-conditional": {
-      "count": 2
-    }
-  },
-  "apps/web/src/components/molecules/score-breakdown.tsx": {
-    "sonarjs/no-nested-conditional": {
-      "count": 1
-    }
-  },
   "apps/web/src/components/organisms/describe-trip-box.tsx": {
     "sonarjs/cognitive-complexity": {
       "count": 1
@@ -23,31 +8,6 @@
     "sonarjs/cognitive-complexity": {
       "count": 1
     },
-    "sonarjs/no-nested-conditional": {
-      "count": 2
-    }
-  },
-  "apps/web/src/components/organisms/search-summary.tsx": {
-    "sonarjs/no-nested-conditional": {
-      "count": 1
-    }
-  },
-  "apps/web/src/components/organisms/theme-park-section.tsx": {
-    "sonarjs/no-nested-conditional": {
-      "count": 1
-    }
-  },
-  "apps/web/src/components/pages/results-page.tsx": {
-    "sonarjs/no-nested-conditional": {
-      "count": 2
-    }
-  },
-  "apps/web/src/components/pages/search-page.tsx": {
-    "sonarjs/no-nested-conditional": {
-      "count": 1
-    }
-  },
-  "apps/web/src/lib/api.ts": {
     "sonarjs/no-nested-conditional": {
       "count": 1
     }
