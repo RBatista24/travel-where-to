@@ -79,6 +79,82 @@ const destinationSummary = (d: Destination) => ({
         : {}),
 });
 
+interface RequestContext {
+    readonly deps: AppDeps;
+    readonly req: IncomingMessage;
+    readonly res: ServerResponse;
+    readonly maxBody: number;
+}
+
+type RouteHandler = (ctx: RequestContext) => Promise<void>;
+
+async function listDestinations({ deps, res }: RequestContext): Promise<void> {
+    send(res, 200, { destinations: (await deps.destinations.list()).map(destinationSummary) });
+}
+
+async function interpretRoute({ deps, req, res, maxBody }: RequestContext): Promise<void> {
+    const parsed = InterpretRequestSchema.safeParse(await readJson(req, maxBody));
+    if (!parsed.success)
+        throw new HttpError(
+            400,
+            'Invalid interpret request',
+            parsed.error.issues.map((i) => i.message),
+        );
+    try {
+        send(res, 200, await interpretSearchText(deps, parsed.data.text));
+    } catch (e) {
+        if (e instanceof LlmOutputError)
+            throw new HttpError(502, 'The interpretation could not be validated', e.issues);
+        throw e;
+    }
+}
+
+async function createSearch({ deps, req, res, maxBody }: RequestContext): Promise<void> {
+    const parsed = SearchRequestSchema.safeParse(await readJson(req, maxBody));
+    if (!parsed.success) {
+        throw new HttpError(
+            400,
+            'Invalid search request',
+            parsed.error.issues.map((i) => ({ path: i.path.join('.'), message: i.message })),
+        );
+    }
+    const result = await deps.engine.search(toCriteria(parsed.data));
+    await deps.searches.save(result);
+    send(res, 201, result);
+}
+
+async function listSearches({ deps, res }: RequestContext): Promise<void> {
+    const recent = await deps.searches.list(20);
+    send(res, 200, {
+        searches: recent.map((s) => ({
+            searchId: s.searchId,
+            createdAt: s.createdAt,
+            criteria: s.criteria,
+            results: s.totalViable,
+            top: s.recommendations.slice(0, 3).map((r) => ({
+                name: r.destination.name,
+                score: r.score.total,
+                tripTotal: r.costs.tripTotal,
+            })),
+        })),
+    });
+}
+
+async function showSearch({ deps, res }: RequestContext, searchId: string): Promise<void> {
+    const found = await deps.searches.get(searchId);
+    if (!found) throw new HttpError(404, 'Search not found');
+    send(res, 200, found);
+}
+
+/** Exact method + path routes. Anything else is matched below or answered with 404. */
+const EXACT_ROUTES = new Map<string, RouteHandler>([
+    ['GET /health', async ({ res }) => send(res, 200, { status: 'ok' })],
+    ['GET /api/destinations', listDestinations],
+    ['POST /api/interpret', interpretRoute],
+    ['POST /api/searches', createSearch],
+    ['GET /api/searches', listSearches],
+]);
+
 /**
  * Travel API. All provider calls happen server-side; no credentials are ever sent to clients.
  * Routes:
@@ -95,77 +171,19 @@ export function createApp(deps: AppDeps): Server {
         try {
             const url = new URL(req.url ?? '/', 'http://localhost');
             const path = withoutTrailingSlashes(url.pathname) || '/';
+            const ctx: RequestContext = { deps, req, res, maxBody };
 
-            if (req.method === 'GET' && path === '/health') return send(res, 200, { status: 'ok' });
-
-            if (req.method === 'GET' && path === '/api/destinations') {
-                return send(res, 200, {
-                    destinations: (await deps.destinations.list()).map(destinationSummary),
-                });
+            const handler = EXACT_ROUTES.get(`${req.method} ${path}`);
+            if (handler) {
+                // Awaited here so a rejected handler reaches the catch below.
+                await handler(ctx);
+                return;
             }
-
-            if (req.method === 'POST' && path === '/api/interpret') {
-                const parsed = InterpretRequestSchema.safeParse(await readJson(req, maxBody));
-                if (!parsed.success)
-                    throw new HttpError(
-                        400,
-                        'Invalid interpret request',
-                        parsed.error.issues.map((i) => i.message),
-                    );
-                try {
-                    return send(res, 200, await interpretSearchText(deps, parsed.data.text));
-                } catch (e) {
-                    if (e instanceof LlmOutputError)
-                        throw new HttpError(
-                            502,
-                            'The interpretation could not be validated',
-                            e.issues,
-                        );
-                    throw e;
-                }
-            }
-
-            if (req.method === 'POST' && path === '/api/searches') {
-                const parsed = SearchRequestSchema.safeParse(await readJson(req, maxBody));
-                if (!parsed.success) {
-                    throw new HttpError(
-                        400,
-                        'Invalid search request',
-                        parsed.error.issues.map((i) => ({
-                            path: i.path.join('.'),
-                            message: i.message,
-                        })),
-                    );
-                }
-                const result = await deps.engine.search(toCriteria(parsed.data));
-                await deps.searches.save(result);
-                return send(res, 201, result);
-            }
-
-            if (req.method === 'GET' && path === '/api/searches') {
-                const recent = await deps.searches.list(20);
-                return send(res, 200, {
-                    searches: recent.map((s) => ({
-                        searchId: s.searchId,
-                        createdAt: s.createdAt,
-                        criteria: s.criteria,
-                        results: s.totalViable,
-                        top: s.recommendations.slice(0, 3).map((r) => ({
-                            name: r.destination.name,
-                            score: r.score.total,
-                            tripTotal: r.costs.tripTotal,
-                        })),
-                    })),
-                });
-            }
-
             const match = /^\/api\/searches\/([A-Za-z0-9-]+)$/.exec(path);
             if (req.method === 'GET' && match) {
-                const found = await deps.searches.get(match[1] ?? '');
-                if (!found) throw new HttpError(404, 'Search not found');
-                return send(res, 200, found);
+                await showSearch(ctx, match[1] ?? '');
+                return;
             }
-
             throw new HttpError(404, 'Not found');
         } catch (err) {
             if (err instanceof HttpError)
