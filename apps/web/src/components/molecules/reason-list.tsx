@@ -28,7 +28,9 @@ export function ReasonList({
                     <li key={r.code} className="flex items-start gap-2">
                         <Icon
                             className={cn('mt-0.5 size-4 shrink-0', TONE[r.tone])}
-                            aria-label={r.tone === 'WARNING' ? 'Warning' : undefined}
+                            {...(r.tone === 'WARNING'
+                                ? { role: 'img', 'aria-label': 'Warning' }
+                                : { 'aria-hidden': true })}
                         />
                         <span>{r.message}</span>
                     </li>

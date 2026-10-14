@@ -49,6 +49,9 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: Web component tests
+        run: pnpm test:web
+
   build-web:
     name: Build web app
     runs-on: ubuntu-24.04

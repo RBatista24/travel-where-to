@@ -1,0 +1,46 @@
+# One-off: adds the web test toolchain on this branch and commits a report. Deleted afterwards.
+name: Bootstrap web tests
+
+on:
+  push:
+    branches: [test/web-components]
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: test/web-components
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+      - name: Identity
+        run: |
+          git config user.name "Renato Batista"
+          git config user.email "109666299+RBatista24@users.noreply.github.com"
+      - name: Add the toolchain
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm --filter @travel-where-to/web add -D vitest @vitejs/plugin-react jsdom @testing-library/react @testing-library/dom @testing-library/jest-dom @testing-library/user-event axe-core
+          pnpm format
+          git add -A
+          git commit -m "build: add Vitest, Testing Library, jsdom and axe-core to the web app"
+      - name: Report
+        run: |
+          {
+            echo "== web tests"; pnpm -s test:web 2>&1 | tail -80 || true
+            echo "== format"; pnpm -s format:check 2>&1 | tail -8 || true
+            echo "== lint"; pnpm -s lint 2>&1 | tail -40 || true
+            echo "== typecheck"; pnpm -s typecheck 2>&1 | tail -30 || true
+            echo "== test"; pnpm -s test 2>&1 | grep -E '^# (pass|fail)' || true
+          } > web-test-report.txt
+          git add web-test-report.txt
+          git commit -m "chore: web test report from the bootstrap run"
+      - name: Push
+        run: git push origin HEAD:test/web-components
