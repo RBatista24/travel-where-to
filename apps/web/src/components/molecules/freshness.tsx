@@ -26,12 +26,14 @@ export function Freshness({
 
     if (!attribution || confidence === 'ESTIMATED') return null;
     const expired = now !== null && isPast(attribution.expiresAt, now);
-    const text =
-        confidence === 'INDICATIVE'
-            ? `Indicative price from ${providerLabel(attribution.provider)} - may have changed`
-            : expired
-              ? 'Price may have changed - search again before booking'
-              : `Price checked ${now ? formatAgo(attribution.retrievedAt, now) : 'recently'} with ${providerLabel(attribution.provider)}`;
+    let text: string;
+    if (confidence === 'INDICATIVE') {
+        text = `Indicative price from ${providerLabel(attribution.provider)} - may have changed`;
+    } else if (expired) {
+        text = 'Price may have changed - search again before booking';
+    } else {
+        text = `Price checked ${now ? formatAgo(attribution.retrievedAt, now) : 'recently'} with ${providerLabel(attribution.provider)}`;
+    }
     const Icon = expired ? TriangleAlertIcon : ClockIcon;
     return (
         <span
