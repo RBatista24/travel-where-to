@@ -1,12 +1,4 @@
 {
-  "packages/flight-providers/src/MockFlightProvider.ts": {
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    },
-    "sonarjs/no-nested-conditional": {
-      "count": 1
-    }
-  },
   "packages/ranking/src/components.ts": {
     "sonarjs/cognitive-complexity": {
       "count": 2
