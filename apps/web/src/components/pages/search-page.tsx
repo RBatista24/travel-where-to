@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
+import { LiveRegion } from '@/components/atoms/live-region';
 import { Skeleton } from '@/components/atoms/skeleton';
 import { ErrorState } from '@/components/molecules/query-state';
 import { PriceLegend } from '@/components/organisms/price-legend';
@@ -49,6 +50,9 @@ export function SearchPage({ fromSearchId }: { fromSearchId?: string }) {
                 </p>
             </header>
 
+            <LiveRegion
+                message={search.status === 'running' ? 'Searching flights, drives and stays' : ''}
+            />
             {fromSearchId && previous.status === 'error' && (
                 <ErrorState
                     error={previous.error}
