@@ -32,6 +32,9 @@ export function SearchPage({ fromSearchId }: { fromSearchId?: string }) {
             setForm(fromCriteria(previous.data.criteria));
     }, [fromSearchId, previous.status, previous.data, form]);
 
+    const formPlaceholder =
+        previous.status === 'error' ? null : <Skeleton className="h-[40rem] w-full" />;
+
     const submit = async () => {
         if (!form) return;
         const result = await search.run(toSearchRequest(form));
@@ -61,9 +64,7 @@ export function SearchPage({ fromSearchId }: { fromSearchId?: string }) {
                 />
             )}
             {form === null ? (
-                previous.status === 'error' ? null : (
-                    <Skeleton className="h-[40rem] w-full" />
-                )
+                formPlaceholder
             ) : (
                 <SearchForm
                     form={form}

@@ -1,6 +1,17 @@
 import * as React from 'react';
 import { Label } from '@/components/atoms/label';
 
+/** The error message wins over the hint when both are present. */
+function describedByFor(
+    id: string,
+    error: string | null | undefined,
+    hint: React.ReactNode,
+): string | undefined {
+    if (error) return `${id}-error`;
+    if (hint) return `${id}-hint`;
+    return undefined;
+}
+
 /** Label + control + optional hint or error, wired together for accessibility. */
 export function FormField({
     id,
@@ -19,7 +30,7 @@ export function FormField({
         'aria-describedby'?: string;
     }>;
 }) {
-    const describedBy = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
+    const describedBy = describedByFor(id, error, hint);
     return (
         <div className="grid gap-2">
             <Label htmlFor={id}>{label}</Label>
@@ -32,7 +43,8 @@ export function FormField({
                 <p id={`${id}-error`} className="text-destructive text-sm">
                     {error}
                 </p>
-            ) : hint ? (
+            ) : null}
+            {!error && hint ? (
                 <p id={`${id}-hint`} className="text-muted-foreground text-xs">
                     {hint}
                 </p>

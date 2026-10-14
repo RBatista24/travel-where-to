@@ -12,6 +12,12 @@ import { OUTSIDE_EUROPE, REGION_OPTIONS, regionLabel } from '@/lib/regions';
 import type { Region } from '@/lib/types';
 
 /** Discover destinations, or compare specific ones the user already has in mind. */
+/** Placeholder for the destination picker while the list loads or fails. */
+const PICKER_PLACEHOLDER: Partial<Record<string, string>> = {
+    loading: 'Loading destinations…',
+    error: "Couldn't load destinations",
+};
+
 export function DestinationSection({ form, update, errors }: FormSectionProps) {
     const destinations = useDestinations();
     const list = destinations.status === 'success' ? destinations.data : [];
@@ -102,11 +108,7 @@ export function DestinationSection({ form, update, errors }: FormSectionProps) {
                         }
                     >
                         <option value="">
-                            {destinations.status === 'loading'
-                                ? 'Loading destinations…'
-                                : destinations.status === 'error'
-                                  ? "Couldn't load destinations"
-                                  : 'Add a destination…'}
+                            {PICKER_PLACEHOLDER[destinations.status] ?? 'Add a destination…'}
                         </option>
                         {REGION_OPTIONS.map((r) => {
                             const inRegion = list.filter(
