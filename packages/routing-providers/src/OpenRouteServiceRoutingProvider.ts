@@ -108,11 +108,13 @@ export class OpenRouteServiceRoutingProvider implements RoutingProvider {
         );
         if (status !== 200) {
             const err = OrsErrorSchema.safeParse(body);
-            const message = err.success
-                ? typeof err.data.error === 'string'
-                    ? err.data.error
-                    : (err.data.error.message ?? '')
-                : JSON.stringify(body ?? '');
+            let message = JSON.stringify(body ?? '');
+            if (err.success) {
+                message =
+                    typeof err.data.error === 'string'
+                        ? err.data.error
+                        : (err.data.error.message ?? '');
+            }
             // 404 "could not find routable point" / no route: there is no road route.
             if (status === 404)
                 throw new ProviderError(PROVIDER, 'UNAVAILABLE', `No driving route: ${message}`);

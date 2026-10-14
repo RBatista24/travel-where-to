@@ -4,6 +4,13 @@ import { addDays, fixedClock } from '@travel-where-to/shared';
 import { ProviderError } from '@travel-where-to/domain';
 import { OpenMeteoWeatherProvider } from './OpenMeteoWeatherProvider';
 
+/** Typical November and December highs in the fixture: warmer in November. */
+function highFor(month: string): number {
+    if (month === '11') return 20;
+    if (month === '12') return 16;
+    return 25;
+}
+
 const clock = fixedClock('2026-10-05T12:00:00Z');
 const req = (startDate: string, endDate: string) => ({
     locationId: 'malaga',
@@ -69,7 +76,7 @@ test('later trips use monthly averages from the archive, fetched once per place'
                     series('2024-01-01', '2025-12-31', (d) => {
                         const m = d.slice(5, 7);
                         return [
-                            m === '11' ? 20 : m === '12' ? 16 : 25,
+                            highFor(m),
                             m === '11' ? 12 : 8,
                             m === '11' && Number(d.slice(8, 10)) <= 6 ? 5 : 0,
                         ];
