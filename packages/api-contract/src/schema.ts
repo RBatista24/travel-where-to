@@ -1,10 +1,9 @@
 import { z } from 'zod';
-import { fromMajor, isValidLocalDate } from '@travel-where-to/shared';
+import { isValidLocalDate } from '@travel-where-to/shared';
 import {
     ACCOMMODATION_FACILITIES,
     DESTINATION_ATTRIBUTES,
     REGIONS,
-    type SearchCriteria,
     type Weekday,
 } from '@travel-where-to/domain';
 
