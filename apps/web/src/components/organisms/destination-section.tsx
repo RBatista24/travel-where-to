@@ -26,6 +26,7 @@ export function DestinationSection({ form, update, errors }: FormSectionProps) {
         form.regions.length === OUTSIDE_EUROPE.length &&
         OUTSIDE_EUROPE.every((r) => form.regions.includes(r));
     const inRegions = list.filter((d) => form.regions.includes(d.region)).length;
+    const plural = inRegions === 1 ? '' : 's';
     return (
         <FieldGroup title="Where to">
             <Tabs
@@ -89,7 +90,7 @@ export function DestinationSection({ form, update, errors }: FormSectionProps) {
                                   '  ',
                                   ' ',
                               )
-                            : `${inRegions} place${inRegions === 1 ? '' : 's'} in your selection.`}
+                            : `${inRegions} place${plural} in your selection.`}
                     </p>
                 </div>
             ) : (
@@ -114,14 +115,16 @@ export function DestinationSection({ form, update, errors }: FormSectionProps) {
                             const inRegion = list.filter(
                                 (d) => d.region === r.value && !form.destinationIds.includes(d.id),
                             );
-                            return inRegion.length === 0 ? null : (
-                                <optgroup key={r.value} label={regionLabel(r.value)}>
-                                    {inRegion.map((d) => (
-                                        <option key={d.id} value={d.id}>
-                                            {d.name}, {d.country}
-                                        </option>
-                                    ))}
-                                </optgroup>
+                            return (
+                                inRegion.length > 0 && (
+                                    <optgroup key={r.value} label={regionLabel(r.value)}>
+                                        {inRegion.map((d) => (
+                                            <option key={d.id} value={d.id}>
+                                                {d.name}, {d.country}
+                                            </option>
+                                        ))}
+                                    </optgroup>
+                                )
                             );
                         })}
                     </NativeSelect>
