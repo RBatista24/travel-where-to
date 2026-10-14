@@ -70,6 +70,35 @@ export interface SerpApiFlightsOptions {
     readonly cacheTtlMinutes?: number;
 }
 
+type TimeRange = { param: string; exact: boolean };
+type Passengers = ReturnType<typeof SerpApiGoogleFlightsProvider.passengers>;
+type SearchResponse = z.infer<typeof ResponseSchema>;
+
+/**
+ * The parsed response, or null when Google Flights found nothing (an answer, not a failure).
+ * Throws the ProviderError that matches the failure otherwise.
+ */
+function responseOrThrow(status: number, body: unknown): SearchResponse | null {
+    const parsed = ResponseSchema.safeParse(body);
+    if (status !== 200)
+        throw providerStatusError(
+            PROVIDER,
+            status,
+            parsed.success ? (parsed.data.error ?? '') : '',
+        );
+    if (!parsed.success)
+        throw new ProviderError(PROVIDER, 'INVALID_RESPONSE', parsed.error.message);
+    const error = parsed.data.error;
+    if (!error) return parsed.data;
+    // "Google Flights hasn't returned any results" is an answer, not a failure.
+    if (/hasn't returned any results|no results/i.test(error)) return null;
+    throw new ProviderError(
+        PROVIDER,
+        /run out of searches|limit/i.test(error) ? 'RATE_LIMITED' : 'UNAVAILABLE',
+        error,
+    );
+}
+
 /**
  * Live flight prices from Google Flights through SerpApi. One call per route and dates,
  * used only to verify the best results (the free plan has 250 searches per month).
@@ -122,9 +151,7 @@ export class SerpApiGoogleFlightsProvider implements LiveFlightProvider {
      * Google Flights takes one hour range per leg. Contiguous windows (e.g. morning + afternoon)
      * map exactly; others use the span between them and the engine re-checks what it can see.
      */
-    static timeRange(
-        times: readonly TimeOfDay[] | undefined,
-    ): { param: string; exact: boolean } | undefined {
+    static timeRange(times: readonly TimeOfDay[] | undefined): TimeRange | undefined {
         if (!times || times.length === 0 || times.length === 4) return undefined;
         const ranges = times.map((t) => TIME_OF_DAY_HOURS[t]).sort((a, b) => a[0] - b[0]);
         const first = ranges[0]![0];
@@ -139,75 +166,76 @@ export class SerpApiGoogleFlightsProvider implements LiveFlightProvider {
         const outTimes = SerpApiGoogleFlightsProvider.timeRange(prefs?.outboundTimes);
         const backTimes = SerpApiGoogleFlightsProvider.timeRange(prefs?.returnTimes);
         const key = `${from}-${to}-${req.outboundDate}-${req.returnDate}-${pax.adults}-${pax.children}-${pax.infantsOnLap}-${req.currency}-${prefs?.directOnly ? 'd' : ''}-${outTimes?.param ?? ''}-${backTimes?.param ?? ''}`;
-        return this.cache.get(key, async () => {
-            const qs = new URLSearchParams({
-                engine: 'google_flights',
-                departure_id: from,
-                arrival_id: to,
-                outbound_date: req.outboundDate,
-                return_date: req.returnDate,
-                type: '1',
-                adults: String(pax.adults),
-                currency: req.currency,
-                gl: this.options.gl ?? 'pt',
-                hl: this.options.hl ?? 'en',
-                api_key: this.options.apiKey,
-                ...(pax.children ? { children: String(pax.children) } : {}),
-                ...(pax.infantsOnLap ? { infants_on_lap: String(pax.infantsOnLap) } : {}),
-                // stops=1 → non-stop only; *_times = "first hour,last hour" of departure.
-                ...(prefs?.directOnly ? { stops: '1' } : {}),
-                ...(outTimes ? { outbound_times: outTimes.param } : {}),
-                ...(backTimes ? { return_times: backTimes.param } : {}),
-            });
-            const filteredBy = {
-                ...(prefs?.directOnly ? { directOnly: true } : {}),
-                ...(outTimes?.exact ? { outboundTimes: true } : {}),
-                ...(backTimes?.exact ? { returnTimes: true } : {}),
-            };
-            const { status, body } = await providerFetchJson(
-                `${this.options.baseUrl ?? 'https://serpapi.com'}/search.json?${qs.toString()}`,
-                {},
-                {
-                    provider: PROVIDER,
-                    timeoutMs: this.options.timeoutMs ?? 30_000,
-                    ...(this.options.fetch ? { fetch: this.options.fetch } : {}),
-                },
-            );
-            const parsed = ResponseSchema.safeParse(body);
-            if (status !== 200)
-                throw providerStatusError(
-                    PROVIDER,
-                    status,
-                    parsed.success ? (parsed.data.error ?? '') : '',
-                );
-            if (!parsed.success)
-                throw new ProviderError(PROVIDER, 'INVALID_RESPONSE', parsed.error.message);
-            if (parsed.data.error) {
-                // "Google Flights hasn't returned any results" is an answer, not a failure.
-                if (/hasn't returned any results|no results/i.test(parsed.data.error)) return [];
-                throw new ProviderError(
-                    PROVIDER,
-                    /run out of searches|limit/i.test(parsed.data.error)
-                        ? 'RATE_LIMITED'
-                        : 'UNAVAILABLE',
-                    parsed.data.error,
-                );
-            }
-            const searchUrl = parsed.data.search_metadata?.google_flights_url;
-            const items = [
-                ...(parsed.data.best_flights ?? []),
-                ...(parsed.data.other_flights ?? []),
-            ];
-            const offers: FlightOffer[] = [];
-            items.forEach((raw, i) => {
-                const it = ItinerarySchema.safeParse(raw);
-                if (!it.success) return;
-                const offer = this.toOffer(it.data, i, from, to, req, pax.total, searchUrl);
-                if (offer)
-                    offers.push(Object.keys(filteredBy).length ? { ...offer, filteredBy } : offer);
-            });
-            return offers.slice(0, 5);
+        return this.cache.get(key, () => this.fetchRoute(from, to, req, pax, outTimes, backTimes));
+    }
+
+    private searchQuery(
+        from: string,
+        to: string,
+        req: FlightDiscoveryRequest,
+        pax: Passengers,
+        outTimes: TimeRange | undefined,
+        backTimes: TimeRange | undefined,
+    ): URLSearchParams {
+        const prefs = req.preferences;
+        return new URLSearchParams({
+            engine: 'google_flights',
+            departure_id: from,
+            arrival_id: to,
+            outbound_date: req.outboundDate,
+            return_date: req.returnDate,
+            type: '1',
+            adults: String(pax.adults),
+            currency: req.currency,
+            gl: this.options.gl ?? 'pt',
+            hl: this.options.hl ?? 'en',
+            api_key: this.options.apiKey,
+            ...(pax.children ? { children: String(pax.children) } : {}),
+            ...(pax.infantsOnLap ? { infants_on_lap: String(pax.infantsOnLap) } : {}),
+            // stops=1 → non-stop only; *_times = "first hour,last hour" of departure.
+            ...(prefs?.directOnly ? { stops: '1' } : {}),
+            ...(outTimes ? { outbound_times: outTimes.param } : {}),
+            ...(backTimes ? { return_times: backTimes.param } : {}),
         });
+    }
+
+    private async fetchRoute(
+        from: string,
+        to: string,
+        req: FlightDiscoveryRequest,
+        pax: Passengers,
+        outTimes: TimeRange | undefined,
+        backTimes: TimeRange | undefined,
+    ): Promise<FlightOffer[]> {
+        const prefs = req.preferences;
+        const qs = this.searchQuery(from, to, req, pax, outTimes, backTimes);
+        const filteredBy = {
+            ...(prefs?.directOnly ? { directOnly: true } : {}),
+            ...(outTimes?.exact ? { outboundTimes: true } : {}),
+            ...(backTimes?.exact ? { returnTimes: true } : {}),
+        };
+        const { status, body } = await providerFetchJson(
+            `${this.options.baseUrl ?? 'https://serpapi.com'}/search.json?${qs.toString()}`,
+            {},
+            {
+                provider: PROVIDER,
+                timeoutMs: this.options.timeoutMs ?? 30_000,
+                ...(this.options.fetch ? { fetch: this.options.fetch } : {}),
+            },
+        );
+        const data = responseOrThrow(status, body);
+        if (!data) return [];
+        const searchUrl = data.search_metadata?.google_flights_url;
+        const items = [...(data.best_flights ?? []), ...(data.other_flights ?? [])];
+        const offers: FlightOffer[] = [];
+        items.forEach((raw, i) => {
+            const it = ItinerarySchema.safeParse(raw);
+            if (!it.success) return;
+            const offer = this.toOffer(it.data, i, from, to, req, pax.total, searchUrl);
+            if (offer)
+                offers.push(Object.keys(filteredBy).length ? { ...offer, filteredBy } : offer);
+        });
+        return offers.slice(0, 5);
     }
 
     private toOffer(

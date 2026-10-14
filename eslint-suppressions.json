@@ -49,11 +49,6 @@
       "count": 1
     }
   },
-  "packages/flight-providers/src/SerpApiGoogleFlightsProvider.ts": {
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    }
-  },
   "packages/llm/src/MockLlmProvider.ts": {
     "sonarjs/cognitive-complexity": {
       "count": 1
