@@ -1,9 +1,4 @@
 {
-  "apps/web/src/components/organisms/destination-section.tsx": {
-    "sonarjs/no-nested-conditional": {
-      "count": 1
-    }
-  },
   "apps/web/src/lib/search-form.ts": {
     "sonarjs/cognitive-complexity": {
       "count": 3
