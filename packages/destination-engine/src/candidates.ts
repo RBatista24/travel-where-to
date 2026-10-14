@@ -17,6 +17,44 @@ export interface CandidateSelection {
     readonly excluded: ExcludedDestination[];
 }
 
+type Mode = SearchCriteria['transport']['modes'][number];
+
+function carPossible(
+    d: Destination,
+    straightKm: number,
+    modes: ReadonlySet<Mode>,
+    maxHours: number | undefined,
+): boolean {
+    return (
+        modes.has('CAR') &&
+        d.reachableByCar &&
+        (maxHours === undefined || straightKm / OPTIMISTIC_ROAD_SPEED_KMH <= maxHours)
+    );
+}
+
+/** Why a destination with no usable transport is left out, given the modes the user chose. */
+function noTransportReason(d: Destination, modes: ReadonlySet<Mode>): string {
+    if (!modes.has('CAR') || modes.has('FLIGHT')) return 'No transport option';
+    if (!d.reachableByCar) return 'Not reachable by car';
+    return 'Beyond your driving limit';
+}
+
+/** The reason a destination is left out, or undefined when it stays a candidate. */
+function exclusionReason(
+    d: Destination,
+    criteria: SearchCriteria,
+    straightKm: number,
+    modes: ReadonlySet<Mode>,
+): string | undefined {
+    if (straightKm < MIN_TRIP_DISTANCE_KM) return 'Too close to your origin';
+    const mustHave = destinationMustHaveFailures(d, criteria.requirements);
+    if (mustHave.length > 0) return mustHave.join('; ');
+    const maxHours = criteria.transport.driving?.maxHours;
+    const flightPossible = modes.has('FLIGHT') && d.airports.length > 0;
+    if (carPossible(d, straightKm, modes, maxHours) || flightPossible) return undefined;
+    return noTransportReason(d, modes);
+}
+
 export function generateCandidates(
     criteria: SearchCriteria,
     all: readonly Destination[],
@@ -39,38 +77,13 @@ export function generateCandidates(
     if (regions && regions.length > 0) pool = pool.filter((d) => regions.includes(d.region));
 
     const modes = new Set(criteria.transport.modes);
-    const maxHours = criteria.transport.driving?.maxHours;
     const candidates: Destination[] = [];
 
     for (const d of pool) {
         const straightKm = haversineKm(criteria.origin.coordinates, d.coordinates);
-        if (straightKm < MIN_TRIP_DISTANCE_KM) {
-            excluded.push({ destinationId: d.id, reason: 'Too close to your origin' });
-            continue;
-        }
-        const mustHave = destinationMustHaveFailures(d, criteria.requirements);
-        if (mustHave.length > 0) {
-            excluded.push({ destinationId: d.id, reason: mustHave.join('; ') });
-            continue;
-        }
-        const carPossible =
-            modes.has('CAR') &&
-            d.reachableByCar &&
-            (maxHours === undefined || straightKm / OPTIMISTIC_ROAD_SPEED_KMH <= maxHours);
-        const flightPossible = modes.has('FLIGHT') && d.airports.length > 0;
-        if (!carPossible && !flightPossible) {
-            excluded.push({
-                destinationId: d.id,
-                reason:
-                    modes.has('CAR') && !modes.has('FLIGHT')
-                        ? d.reachableByCar
-                            ? 'Beyond your driving limit'
-                            : 'Not reachable by car'
-                        : 'No transport option',
-            });
-            continue;
-        }
-        candidates.push(d);
+        const reason = exclusionReason(d, criteria, straightKm, modes);
+        if (reason === undefined) candidates.push(d);
+        else excluded.push({ destinationId: d.id, reason });
     }
     return { candidates, excluded };
 }
