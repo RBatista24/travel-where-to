@@ -1,0 +1,4 @@
+# Who owns this repository: CODEOWNERS syntax, a path anchored at the root, then the
+# owner named by the email their sign-in carries.
+
+/    renatoapbatista@gmail.com
