@@ -5,7 +5,8 @@ import { SearchValidationError, type SearchEngine } from '@travel-where-to/searc
 import { SearchRequestSchema } from '@travel-where-to/api-contract';
 import { toCriteria } from './toCriteria';
 import type { SearchRepository } from './searchRepository';
-import { interpretTravelRequest, LlmOutputError, type LlmProvider } from '@travel-where-to/llm';
+import { LlmOutputError, type LlmProvider } from '@travel-where-to/llm';
+import { interpretSearchText } from './interpretSearchText';
 import { z } from 'zod';
 
 const InterpretRequestSchema = z.object({ text: z.string().trim().min(3).max(2000) }).strict();
@@ -112,33 +113,7 @@ export function createApp(deps: AppDeps): Server {
                         parsed.error.issues.map((i) => i.message),
                     );
                 try {
-                    const interpreted = await interpretTravelRequest(deps.llm, parsed.data.text);
-                    // Names the model mentioned → catalogue ids (the model never invents destinations).
-                    const all = await deps.destinations.list();
-                    const norm = (x: string) =>
-                        x
-                            .normalize('NFD')
-                            .replace(/[\u0300-\u036f]/g, '')
-                            .toLowerCase();
-                    const destinations = (interpreted.intent.destinationNames ?? [])
-                        .map((n) => {
-                            const short = (d: { name: string }) =>
-                                norm(d.name.replace(/ \(.*\)$/, ''));
-                            // Exact name first, then the longest catalogue name contained in what was said.
-                            return (
-                                all.find((d) => short(d) === norm(n)) ??
-                                all
-                                    .filter(
-                                        (d) =>
-                                            norm(n).includes(short(d)) ||
-                                            norm(d.name).includes(norm(n)),
-                                    )
-                                    .sort((a, b) => short(b).length - short(a).length)[0]
-                            );
-                        })
-                        .filter((d): d is NonNullable<typeof d> => d !== undefined)
-                        .map((d) => ({ id: d.id, name: d.name }));
-                    return send(res, 200, { ...interpreted, destinations });
+                    return send(res, 200, await interpretSearchText(deps, parsed.data.text));
                 } catch (e) {
                     if (e instanceof LlmOutputError)
                         throw new HttpError(
