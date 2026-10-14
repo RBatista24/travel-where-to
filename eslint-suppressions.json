@@ -80,11 +80,6 @@
       "count": 2
     }
   },
-  "packages/search-engine/src/relaxation.ts": {
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    }
-  },
   "packages/shared/src/dates.ts": {
     "sonarjs/redundant-type-aliases": {
       "count": 1

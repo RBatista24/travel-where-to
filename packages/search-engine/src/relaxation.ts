@@ -11,18 +11,29 @@ interface Candidate {
 
 /** Ways to loosen a search that returned nothing (spec §37). Each is applied on its own. */
 export function relaxationCandidates(c: SearchCriteria): Candidate[] {
-    const out: Candidate[] = [];
+    return [
+        budgetCandidate(c),
+        ...transportCandidates(c),
+        ...dateCandidates(c),
+        ...accommodationCandidates(c),
+        ...requirementCandidates(c),
+    ];
+}
 
+function budgetCandidate(c: SearchCriteria): Candidate {
     const newBudget = fromMajor(
         Math.ceil(toMajor(multiplyMoney(c.budget, 1.25)) / 50) * 50,
         c.budget.currency,
     );
-    out.push({
+    return {
         code: 'BUDGET',
         description: `${formatMoney(newBudget)} budget`,
         criteria: { ...c, budget: newBudget },
-    });
+    };
+}
 
+function transportCandidates(c: SearchCriteria): Candidate[] {
+    const out: Candidate[] = [];
     if (!c.transport.modes.includes('CAR'))
         out.push({
             code: 'ALLOW_CAR',
@@ -78,48 +89,57 @@ export function relaxationCandidates(c: SearchCriteria): Candidate[] {
                 },
             },
         });
+    return out;
+}
 
+function dateCandidates(c: SearchCriteria): Candidate[] {
     if (c.dates.kind === 'EXACT') {
         const nights = Math.round(
             (Date.parse(c.dates.checkOut) - Date.parse(c.dates.checkIn)) / 86_400_000,
         );
-        out.push({
-            code: 'DATES_FLEXIBLE',
-            description: '±2 days flexibility',
-            criteria: {
-                ...c,
-                dates: {
-                    kind: 'FLEXIBLE',
-                    windowStart: addDays(c.dates.checkIn, -2),
-                    windowEnd: addDays(c.dates.checkOut, 2),
-                    nights,
+        return [
+            {
+                code: 'DATES_FLEXIBLE',
+                description: '±2 days flexibility',
+                criteria: {
+                    ...c,
+                    dates: {
+                        kind: 'FLEXIBLE',
+                        windowStart: addDays(c.dates.checkIn, -2),
+                        windowEnd: addDays(c.dates.checkOut, 2),
+                        nights,
+                    },
                 },
             },
-        });
-    } else {
-        if (c.dates.weekdays) {
-            const { kind, windowStart, windowEnd, nights } = c.dates;
-            const rest = { kind, windowStart, windowEnd, nights };
-            out.push({
-                code: 'ANY_WEEKDAYS',
-                description: `Any days of the week (${rest.nights} nights)`,
-                criteria: { ...c, dates: rest },
-            });
-        }
+        ];
+    }
+    const out: Candidate[] = [];
+    if (c.dates.weekdays) {
+        const { kind, windowStart, windowEnd, nights } = c.dates;
+        const rest = { kind, windowStart, windowEnd, nights };
         out.push({
-            code: 'DATES_WIDER',
-            description: 'Widen the date window by a week',
-            criteria: {
-                ...c,
-                dates: {
-                    ...c.dates,
-                    windowStart: addDays(c.dates.windowStart, -7),
-                    windowEnd: addDays(c.dates.windowEnd, 7),
-                },
-            },
+            code: 'ANY_WEEKDAYS',
+            description: `Any days of the week (${rest.nights} nights)`,
+            criteria: { ...c, dates: rest },
         });
     }
+    out.push({
+        code: 'DATES_WIDER',
+        description: 'Widen the date window by a week',
+        criteria: {
+            ...c,
+            dates: {
+                ...c.dates,
+                windowStart: addDays(c.dates.windowStart, -7),
+                windowEnd: addDays(c.dates.windowEnd, 7),
+            },
+        },
+    });
+    return out;
+}
 
+function accommodationCandidates(c: SearchCriteria): Candidate[] {
+    const out: Candidate[] = [];
     const acc = c.accommodation;
     if (acc.minRating !== undefined)
         out.push({
@@ -157,7 +177,11 @@ export function relaxationCandidates(c: SearchCriteria): Candidate[] {
             description: 'Include apartments',
             criteria: { ...c, accommodation: { ...acc, types: [...acc.types, 'APARTMENT'] } },
         });
+    return out;
+}
 
+function requirementCandidates(c: SearchCriteria): Candidate[] {
+    const out: Candidate[] = [];
     c.requirements.forEach((r, i) => {
         if (r.priority !== 'MUST_HAVE') return;
         const softened: Requirement = { ...r, priority: 'IMPORTANT' };
