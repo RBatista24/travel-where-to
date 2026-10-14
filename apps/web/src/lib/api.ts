@@ -75,18 +75,17 @@ function detailLine(d: { path?: string; message: unknown }): string {
     return `${prefix}${String(d.message)}`;
 }
 
+function detailText(d: unknown): string {
+    if (typeof d === 'string') return d;
+    if (typeof d === 'object' && d && 'message' in d)
+        return detailLine(d as { path?: string; message: unknown });
+    return JSON.stringify(d);
+}
+
 /** Turn validation details from the API into readable lines. */
 export function errorLines(error: unknown): string[] {
     if (!(error instanceof ApiError))
         return [error instanceof Error ? error.message : 'Something went wrong.'];
-    const details = Array.isArray(error.details)
-        ? error.details.map((d) =>
-              typeof d === 'string'
-                  ? d
-                  : typeof d === 'object' && d && 'message' in d
-                    ? detailLine(d as { path?: string; message: unknown })
-                    : JSON.stringify(d),
-          )
-        : [];
+    const details = Array.isArray(error.details) ? error.details.map(detailText) : [];
     return [error.message, ...details];
 }
