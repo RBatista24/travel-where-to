@@ -14,7 +14,7 @@ export function MatchScore({
     className?: string;
 }) {
     return (
-        <div className={cn('inline-flex flex-col', className)} aria-label={`${score}% match`}>
+        <div className={cn('inline-flex flex-col', className)}>
             <div className="flex items-baseline gap-1">
                 <span
                     className={cn(
@@ -36,6 +36,7 @@ export function MatchScore({
                 </span>
             </div>
             <div
+                aria-hidden="true"
                 className={cn(
                     'bg-muted mt-2 h-1.5 overflow-hidden rounded-full',
                     size === 'sm' ? 'w-16' : 'w-full min-w-24',

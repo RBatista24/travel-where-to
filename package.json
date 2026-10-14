@@ -25,7 +25,8 @@
         "format": "prettier --write .",
         "format:check": "prettier --check .",
         "fix": "pnpm format && pnpm lint:fix",
-        "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"
+        "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm test:web",
+        "test:web": "pnpm --filter @travel-where-to/web test"
     },
     "devDependencies": {
         "@eslint-community/eslint-plugin-eslint-comments": "^4.8.1",
