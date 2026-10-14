@@ -6,6 +6,13 @@ import type { SearchCriteria } from '@/lib/types';
 import { describeFlightPreferences, describeWeekdays } from '@/lib/trip-preferences';
 import { describeRegions } from '@/lib/regions';
 
+/** "Fly or drive" when both modes are allowed, otherwise the one mode. */
+function transportWords(modes: readonly string[]): string {
+    if (modes.length === 2) return 'Fly or drive';
+    if (modes[0] === 'FLIGHT') return 'Fly';
+    return 'Drive';
+}
+
 export function describeDates(d: SearchCriteria['dates']): string {
     if (d.kind === 'EXACT') return `${formatDate(d.checkIn)} → ${formatDate(d.checkOut)}`;
     if (d.weekdays)
@@ -42,11 +49,7 @@ export function SearchSummary({
         describeDates(criteria.dates),
         describeTravellers(criteria.travellers),
         `${formatMoneyRounded(criteria.budget)} budget`,
-        criteria.transport.modes.length === 2
-            ? 'Fly or drive'
-            : criteria.transport.modes[0] === 'FLIGHT'
-              ? 'Fly'
-              : 'Drive',
+        transportWords(criteria.transport.modes),
         describeFlightPreferences(criteria.transport.flights),
     ].filter(Boolean);
     return (
