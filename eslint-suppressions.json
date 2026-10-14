@@ -77,11 +77,6 @@
       "count": 3
     }
   },
-  "packages/routing-providers/src/OpenRouteServiceRoutingProvider.ts": {
-    "sonarjs/no-nested-conditional": {
-      "count": 1
-    }
-  },
   "packages/search-engine/src/SearchEngine.ts": {
     "sonarjs/cognitive-complexity": {
       "count": 3
@@ -100,11 +95,6 @@
       "count": 1
     }
   },
-  "packages/weather-providers/src/openMeteo.test.ts": {
-    "sonarjs/no-nested-conditional": {
-      "count": 1
-    }
-  },
   "services/api/src/app.ts": {
     "sonarjs/cognitive-complexity": {
       "count": 1
@@ -116,11 +106,6 @@
     },
     "sonarjs/no-nested-conditional": {
       "count": 2
-    }
-  },
-  "services/api/src/demo.ts": {
-    "sonarjs/no-nested-conditional": {
-      "count": 1
     }
   }
 }

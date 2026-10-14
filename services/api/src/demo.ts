@@ -7,6 +7,13 @@ import type { SearchCriteria } from '@travel-where-to/domain';
 import { formatDuration } from '@travel-where-to/ranking';
 import { createMockSearchEngine } from './composition';
 
+/** Symbol for a reason's tone: warning, positive or neutral. */
+function toneMark(tone: string): string {
+    if (tone === 'WARNING') return '⚠';
+    if (tone === 'POSITIVE') return '✓';
+    return '·';
+}
+
 const criteria: SearchCriteria = {
     origin: {
         label: 'Quinta do Anjo',
@@ -44,9 +51,7 @@ result.recommendations.forEach((r, i) => {
             `${r.checkIn} → ${r.checkOut}  ${how}`,
     );
     for (const reason of r.reasons.slice(0, 8))
-        console.log(
-            `      ${reason.tone === 'WARNING' ? '⚠' : reason.tone === 'POSITIVE' ? '✓' : '·'} ${reason.message}`,
-        );
+        console.log(`      ${toneMark(reason.tone)} ${reason.message}`);
 });
 if (result.notices.length) console.log(`\nNotices:\n  ${result.notices.join('\n  ')}`);
 if (result.relaxations.length)
