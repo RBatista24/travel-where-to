@@ -166,112 +166,143 @@ export function originOf(form: SearchFormState): OriginOption {
     return ORIGINS.find((o) => o.id === form.originId) ?? (ORIGINS[0] as OriginOption);
 }
 
-export function toSearchRequest(form: SearchFormState): SearchRequest {
-    const origin = originOf(form);
+function flightsOf(
+    form: SearchFormState,
+): NonNullable<SearchRequest['transport']['flights']> | undefined {
+    const wanted = form.directOnly || form.outboundTimes.length > 0 || form.returnTimes.length > 0;
+    if (!form.modes.includes('FLIGHT') || !wanted) return undefined;
+    return {
+        ...(form.directOnly ? { directOnly: true } : {}),
+        ...(form.outboundTimes.length ? { outboundTimes: form.outboundTimes } : {}),
+        ...(form.returnTimes.length ? { returnTimes: form.returnTimes } : {}),
+    };
+}
+
+function datesOf(form: SearchFormState): SearchRequest['dates'] {
+    if (form.dateMode === 'EXACT') {
+        return { kind: 'EXACT', checkIn: form.checkIn, checkOut: form.checkOut };
+    }
+    const bounds = {
+        kind: 'FLEXIBLE' as const,
+        windowStart: form.windowStart,
+        windowEnd: form.windowEnd,
+    };
+    const days = weekdaysOf(form);
+    if (!days) return { ...bounds, nights: form.nights };
+    return {
+        ...bounds,
+        nights: patternNights(days.departOn, days.returnOn),
+        weekdays: {
+            departOn: [days.departOn as Weekday],
+            returnOn: [days.returnOn as Weekday],
+        },
+    };
+}
+
+function drivingOf(form: SearchFormState): SearchRequest['transport']['driving'] {
     const maxHours = optNumber(form.maxDrivingHours);
     const preferredMaxHours = optNumber(form.preferredDrivingHours);
+    if (maxHours === undefined && preferredMaxHours === undefined) return undefined;
+    return {
+        ...(maxHours !== undefined ? { maxHours } : {}),
+        ...(preferredMaxHours !== undefined ? { preferredMaxHours } : {}),
+    };
+}
+
+function vehicleOf(form: SearchFormState): SearchRequest['transport']['vehicle'] {
     const consumption = optNumber(form.consumption);
     const fuelPrice = optNumber(form.fuelPrice);
+    if (!form.useVehicle || consumption === undefined || fuelPrice === undefined) return undefined;
+    return {
+        fuelType: form.fuelType,
+        consumptionPer100Km: consumption,
+        fuelPrice: { amount: fuelPrice, currency: 'EUR' },
+    };
+}
+
+function transportOf(
+    form: SearchFormState,
+    flights: SearchRequest['transport']['flights'],
+): SearchRequest['transport'] {
+    const driving = drivingOf(form);
+    const vehicle = vehicleOf(form);
+    return {
+        modes: form.modes,
+        ...(flights ? { flights } : {}),
+        ...(driving ? { driving } : {}),
+        ...(vehicle ? { vehicle } : {}),
+    };
+}
+
+function destinationOf(form: SearchFormState): SearchRequest['destination'] {
+    if (form.destinationMode === 'KNOWN' && form.destinationIds.length > 0) {
+        return { kind: 'KNOWN', destinationIds: form.destinationIds };
+    }
+    return {
+        kind: 'DISCOVER',
+        ...(form.regions.length ? { regions: form.regions } : {}),
+    };
+}
+
+function accommodationOf(form: SearchFormState): SearchRequest['accommodation'] {
     const minStars = optNumber(form.minStars);
     const minRating = optNumber(form.minRating);
     const centreKm = optNumber(form.maxDistanceToCentreKm);
     const beachM = optNumber(form.maxDistanceToBeachM);
-    const minAvgHighC = optNumber(form.minAvgHighC);
+    return {
+        types: form.accommodationTypes,
+        ...(minStars !== undefined ? { minStars } : {}),
+        ...(minRating !== undefined ? { minRating } : {}),
+        ...(centreKm !== undefined ? { maxDistanceToCentreM: Math.round(centreKm * 1000) } : {}),
+        ...(beachM !== undefined ? { maxDistanceToBeachM: beachM } : {}),
+        ...(form.parkHotelsOnly ? { parkHotelsOnly: true } : {}),
+    };
+}
+
+function parkTicketsOf(form: SearchFormState): Partial<SearchRequest> {
     const parkDays = optNumber(form.parkDays);
-    const days = weekdaysOf(form);
-    const flying = form.modes.includes('FLIGHT');
-    const flights =
-        flying && (form.directOnly || form.outboundTimes.length > 0 || form.returnTimes.length > 0)
-            ? {
-                  ...(form.directOnly ? { directOnly: true } : {}),
-                  ...(form.outboundTimes.length ? { outboundTimes: form.outboundTimes } : {}),
-                  ...(form.returnTimes.length ? { returnTimes: form.returnTimes } : {}),
-              }
-            : undefined;
+    if (form.includeParkTickets && parkDays === undefined) return {};
+    return {
+        parkTickets: {
+            include: form.includeParkTickets,
+            ...(parkDays !== undefined ? { days: Math.round(parkDays) } : {}),
+        },
+    };
+}
+
+function weatherOf(form: SearchFormState): Partial<SearchRequest> {
+    const minAvgHighC = optNumber(form.minAvgHighC);
+    if (minAvgHighC === undefined && !form.preferWarm) return {};
+    return {
+        weather: {
+            ...(minAvgHighC !== undefined ? { minAvgHighC } : {}),
+            ...(form.preferWarm ? { preferWarm: true } : {}),
+        },
+    };
+}
+
+export function toSearchRequest(form: SearchFormState): SearchRequest {
+    const origin = originOf(form);
+    const flights = flightsOf(form);
     return {
         origin: {
             label: origin.label,
             coordinates: { lat: origin.lat, lon: origin.lon },
             countryCode: 'PT',
         },
-        dates:
-            form.dateMode === 'EXACT'
-                ? { kind: 'EXACT', checkIn: form.checkIn, checkOut: form.checkOut }
-                : days
-                  ? {
-                        kind: 'FLEXIBLE',
-                        windowStart: form.windowStart,
-                        windowEnd: form.windowEnd,
-                        nights: patternNights(days.departOn, days.returnOn),
-                        weekdays: {
-                            departOn: [days.departOn as Weekday],
-                            returnOn: [days.returnOn as Weekday],
-                        },
-                    }
-                  : {
-                        kind: 'FLEXIBLE',
-                        windowStart: form.windowStart,
-                        windowEnd: form.windowEnd,
-                        nights: form.nights,
-                    },
+        dates: datesOf(form),
         travellers: [
             ...Array.from({ length: form.adults }, () => ({ type: 'ADULT' as const })),
             ...form.childAges.map((age) => ({ type: 'CHILD' as const, age })),
             ...form.infantAges.map((age) => ({ type: 'INFANT' as const, age })),
         ],
         budget: { amount: form.budget, currency: 'EUR' },
-        transport: {
-            modes: form.modes,
-            ...(flights ? { flights } : {}),
-            ...(maxHours !== undefined || preferredMaxHours !== undefined
-                ? {
-                      driving: {
-                          ...(maxHours !== undefined ? { maxHours } : {}),
-                          ...(preferredMaxHours !== undefined ? { preferredMaxHours } : {}),
-                      },
-                  }
-                : {}),
-            ...(form.useVehicle && consumption !== undefined && fuelPrice !== undefined
-                ? {
-                      vehicle: {
-                          fuelType: form.fuelType,
-                          consumptionPer100Km: consumption,
-                          fuelPrice: { amount: fuelPrice, currency: 'EUR' },
-                      },
-                  }
-                : {}),
-        },
-        destination:
-            form.destinationMode === 'KNOWN' && form.destinationIds.length > 0
-                ? { kind: 'KNOWN', destinationIds: form.destinationIds }
-                : { kind: 'DISCOVER', ...(form.regions.length ? { regions: form.regions } : {}) },
+        transport: transportOf(form, flights),
+        destination: destinationOf(form),
         requirements: form.requirements.map(withoutSource),
-        accommodation: {
-            types: form.accommodationTypes,
-            ...(minStars !== undefined ? { minStars } : {}),
-            ...(minRating !== undefined ? { minRating } : {}),
-            ...(centreKm !== undefined
-                ? { maxDistanceToCentreM: Math.round(centreKm * 1000) }
-                : {}),
-            ...(beachM !== undefined ? { maxDistanceToBeachM: beachM } : {}),
-            ...(form.parkHotelsOnly ? { parkHotelsOnly: true } : {}),
-        },
-        ...(!form.includeParkTickets || parkDays !== undefined
-            ? {
-                  parkTickets: {
-                      include: form.includeParkTickets,
-                      ...(parkDays !== undefined ? { days: Math.round(parkDays) } : {}),
-                  },
-              }
-            : {}),
-        ...(minAvgHighC !== undefined || form.preferWarm
-            ? {
-                  weather: {
-                      ...(minAvgHighC !== undefined ? { minAvgHighC } : {}),
-                      ...(form.preferWarm ? { preferWarm: true } : {}),
-                  },
-              }
-            : {}),
+        accommodation: accommodationOf(form),
+        ...parkTicketsOf(form),
+        ...weatherOf(form),
     };
 }
 
@@ -295,60 +326,84 @@ function nearestOrigin(point: { readonly lat: number; readonly lon: number }): O
     return best;
 }
 
-/** Stored criteria (money in minor units) → editable form. */
-export function fromCriteria(
-    c: SearchCriteria,
-    base: SearchFormState = defaultForm(),
-): SearchFormState {
-    const origin =
-        ORIGINS.find((o) => o.label === c.origin.label) ?? nearestOrigin(c.origin.coordinates);
-    const travellers = c.travellers;
-    const v = c.transport.vehicle;
+function datesFieldsOf(c: SearchCriteria): Partial<SearchFormState> {
+    if (c.dates.kind === 'EXACT') {
+        return {
+            checkIn: c.dates.checkIn,
+            checkOut: c.dates.checkOut,
+            nights: nightsBetween(c.dates.checkIn, c.dates.checkOut),
+        };
+    }
     return {
-        ...base,
-        originId: origin.id,
-        dateMode: c.dates.kind,
-        ...(c.dates.kind === 'EXACT'
-            ? {
-                  checkIn: c.dates.checkIn,
-                  checkOut: c.dates.checkOut,
-                  nights: nightsBetween(c.dates.checkIn, c.dates.checkOut),
-              }
-            : {
-                  windowStart: c.dates.windowStart,
-                  windowEnd: c.dates.windowEnd,
-                  nights: c.dates.nights,
-              }),
-        ...(c.dates.kind === 'FLEXIBLE' && c.dates.weekdays
-            ? (() => {
-                  const d = c.dates.weekdays.departOn[0] ?? 5;
-                  const r = c.dates.weekdays.returnOn[0] ?? 0;
-                  return { weekdayPreset: presetFor(d, r), departDay: d, returnDay: r };
-              })()
-            : { weekdayPreset: 'ANY' as const }),
+        windowStart: c.dates.windowStart,
+        windowEnd: c.dates.windowEnd,
+        nights: c.dates.nights,
+    };
+}
+
+function weekdayFieldsOf(
+    c: SearchCriteria,
+): Partial<Pick<SearchFormState, 'weekdayPreset' | 'departDay' | 'returnDay'>> {
+    const weekdays = c.dates.kind === 'FLEXIBLE' ? c.dates.weekdays : undefined;
+    if (!weekdays) return { weekdayPreset: 'ANY' };
+    const d = weekdays.departOn[0] ?? 5;
+    const r = weekdays.returnOn[0] ?? 0;
+    return { weekdayPreset: presetFor(d, r), departDay: d, returnDay: r };
+}
+
+function drivingFieldsOf(c: SearchCriteria): Partial<SearchFormState> {
+    return {
+        maxDrivingHours: c.transport.driving?.maxHours?.toString() ?? '',
+        preferredDrivingHours: c.transport.driving?.preferredMaxHours?.toString() ?? '',
+    };
+}
+
+function vehicleFieldsOf(c: SearchCriteria): Partial<SearchFormState> {
+    const v = c.transport.vehicle;
+    if (!v) return {};
+    return {
+        fuelType: v.fuelType,
+        consumption: String(v.consumptionPer100Km),
+        fuelPrice: String(v.fuelPrice.amountMinor / 100),
+    };
+}
+
+function destinationFieldsOf(
+    c: SearchCriteria,
+): Pick<SearchFormState, 'destinationMode' | 'destinationIds' | 'regions'> {
+    if (c.destination.kind === 'KNOWN') {
+        return {
+            destinationMode: 'KNOWN',
+            destinationIds: [...c.destination.destinationIds],
+            regions: [],
+        };
+    }
+    return {
+        destinationMode: 'DISCOVER',
+        destinationIds: [],
+        regions: [...(c.destination.regions ?? [])],
+    };
+}
+
+function flightFieldsOf(c: SearchCriteria): Partial<SearchFormState> {
+    return {
         directOnly: c.transport.flights?.directOnly ?? false,
         outboundTimes: [...(c.transport.flights?.outboundTimes ?? [])],
         returnTimes: [...(c.transport.flights?.returnTimes ?? [])],
+    };
+}
+
+function travellerFieldsOf(c: SearchCriteria): Partial<SearchFormState> {
+    const travellers = c.travellers;
+    return {
         adults: travellers.filter((t) => t.type === 'ADULT').length,
         childAges: travellers.filter((t) => t.type === 'CHILD').map((t) => t.age ?? 8),
         infantAges: travellers.filter((t) => t.type === 'INFANT').map((t) => t.age ?? 0),
-        budget: Math.round(c.budget.amountMinor / 100),
-        modes: [...c.transport.modes],
-        maxDrivingHours: c.transport.driving?.maxHours?.toString() ?? '',
-        preferredDrivingHours: c.transport.driving?.preferredMaxHours?.toString() ?? '',
-        useVehicle: v !== undefined,
-        ...(v
-            ? {
-                  fuelType: v.fuelType,
-                  consumption: String(v.consumptionPer100Km),
-                  fuelPrice: String(v.fuelPrice.amountMinor / 100),
-              }
-            : {}),
-        destinationMode: c.destination.kind,
-        destinationIds: c.destination.kind === 'KNOWN' ? [...c.destination.destinationIds] : [],
-        regions: c.destination.kind === 'DISCOVER' ? [...(c.destination.regions ?? [])] : [],
-        requirements: c.requirements.map((r) => ({ ...r, source: 'USER' as const })),
-        accommodationTypes: [...c.accommodation.types],
+    };
+}
+
+function accommodationFieldsOf(c: SearchCriteria): Partial<SearchFormState> {
+    return {
         minStars: c.accommodation.minStars?.toString() ?? '',
         minRating: c.accommodation.minRating?.toString() ?? '',
         maxDistanceToCentreKm:
@@ -356,11 +411,44 @@ export function fromCriteria(
                 ? String(c.accommodation.maxDistanceToCentreM / 1000)
                 : '',
         maxDistanceToBeachM: c.accommodation.maxDistanceToBeachM?.toString() ?? '',
+        parkHotelsOnly: c.accommodation.parkHotelsOnly ?? false,
+    };
+}
+
+function weatherFieldsOf(c: SearchCriteria): Partial<SearchFormState> {
+    return {
         minAvgHighC: c.weather?.minAvgHighC?.toString() ?? '',
         preferWarm: c.weather?.preferWarm ?? false,
-        parkHotelsOnly: c.accommodation.parkHotelsOnly ?? false,
         includeParkTickets: c.parkTickets?.include ?? true,
         parkDays: c.parkTickets?.days?.toString() ?? '',
+    };
+}
+
+/** Stored criteria (money in minor units) → editable form. */
+export function fromCriteria(
+    c: SearchCriteria,
+    base: SearchFormState = defaultForm(),
+): SearchFormState {
+    const origin =
+        ORIGINS.find((o) => o.label === c.origin.label) ?? nearestOrigin(c.origin.coordinates);
+    return {
+        ...base,
+        originId: origin.id,
+        dateMode: c.dates.kind,
+        ...datesFieldsOf(c),
+        ...weekdayFieldsOf(c),
+        ...flightFieldsOf(c),
+        ...travellerFieldsOf(c),
+        budget: Math.round(c.budget.amountMinor / 100),
+        modes: [...c.transport.modes],
+        ...drivingFieldsOf(c),
+        useVehicle: c.transport.vehicle !== undefined,
+        ...vehicleFieldsOf(c),
+        ...destinationFieldsOf(c),
+        requirements: c.requirements.map((r) => ({ ...r, source: 'USER' as const })),
+        accommodationTypes: [...c.accommodation.types],
+        ...accommodationFieldsOf(c),
+        ...weatherFieldsOf(c),
     };
 }
 
@@ -383,46 +471,65 @@ export function setPriority(r: FormRequirement, priority: RequirementPriority): 
     return { ...r, priority, source: 'USER' };
 }
 
-/** Applies an AI interpretation to the form. Every applied requirement stays marked as AI until the user edits it. */
-export function applyIntent(
+function applyDestinationIntent(
     form: SearchFormState,
     intent: TravelIntent,
-    destinationIds: readonly string[] = [],
+    destinationIds: readonly string[],
 ): SearchFormState {
-    let next: SearchFormState = { ...form };
-    if (destinationIds.length > 0)
-        next = { ...next, destinationMode: 'KNOWN', destinationIds: [...new Set(destinationIds)] };
-    if (intent.regions?.length && destinationIds.length === 0)
-        next = { ...next, destinationMode: 'DISCOVER', regions: [...intent.regions] };
-    if (intent.parkHotelsOnly) next.parkHotelsOnly = true;
-    if (intent.parkDays)
-        next = { ...next, includeParkTickets: true, parkDays: String(intent.parkDays) };
-    for (const r of intent.requirements)
-        next.requirements = upsertRequirement(next.requirements, {
-            ...r,
-            source: 'AI_INTERPRETATION',
-        });
-    if (intent.budget) next.budget = Math.round(intent.budget.amount);
-    if (intent.nights) next = { ...next, nights: intent.nights };
-    if (intent.adults) next.adults = intent.adults;
-    if (intent.childAges) {
-        next.childAges = intent.childAges.filter((a) => a >= 2);
-        next.infantAges = intent.childAges.filter((a) => a < 2);
+    if (destinationIds.length > 0) {
+        return { ...form, destinationMode: 'KNOWN', destinationIds: [...new Set(destinationIds)] };
     }
-    if (intent.dateWindow)
+    if (intent.regions?.length) {
+        return { ...form, destinationMode: 'DISCOVER', regions: [...intent.regions] };
+    }
+    return form;
+}
+
+function applyParkIntent(form: SearchFormState, intent: TravelIntent): SearchFormState {
+    let next = form;
+    if (intent.parkHotelsOnly) next = { ...next, parkHotelsOnly: true };
+    if (intent.parkDays) {
+        next = { ...next, includeParkTickets: true, parkDays: String(intent.parkDays) };
+    }
+    return next;
+}
+
+function applyRequirementIntent(form: SearchFormState, intent: TravelIntent): SearchFormState {
+    let requirements = form.requirements;
+    for (const r of intent.requirements) {
+        requirements = upsertRequirement(requirements, { ...r, source: 'AI_INTERPRETATION' });
+    }
+    return { ...form, requirements };
+}
+
+function applyTravellerIntent(form: SearchFormState, intent: TravelIntent): SearchFormState {
+    let next = form;
+    if (intent.budget) next = { ...next, budget: Math.round(intent.budget.amount) };
+    if (intent.nights) next = { ...next, nights: intent.nights };
+    if (intent.adults) next = { ...next, adults: intent.adults };
+    if (intent.childAges) {
+        next = {
+            ...next,
+            childAges: intent.childAges.filter((a) => a >= 2),
+            infantAges: intent.childAges.filter((a) => a < 2),
+        };
+    }
+    return next;
+}
+
+function applyDateIntent(form: SearchFormState, intent: TravelIntent): SearchFormState {
+    let next = form;
+    if (intent.dateWindow) {
         next = {
             ...next,
             dateMode: 'FLEXIBLE',
             windowStart: intent.dateWindow.start,
             windowEnd: intent.dateWindow.end,
         };
-    if (intent.transportModes) next.modes = [...intent.transportModes];
-    if (intent.directFlightsOnly) next.directOnly = true;
-    if (intent.outboundTimes?.length) next.outboundTimes = [...intent.outboundTimes];
-    if (intent.returnTimes?.length) next.returnTimes = [...intent.returnTimes];
+    }
     const d = intent.departOn?.[0];
     const r = intent.returnOn?.[0];
-    if (d !== undefined && r !== undefined)
+    if (d !== undefined && r !== undefined) {
         next = {
             ...next,
             dateMode: 'FLEXIBLE',
@@ -430,37 +537,89 @@ export function applyIntent(
             departDay: d,
             returnDay: r,
         };
-    if (intent.maxDrivingHours) next.maxDrivingHours = String(intent.maxDrivingHours);
-    if (intent.minAvgHighC !== undefined) next.minAvgHighC = String(intent.minAvgHighC);
+    }
     return next;
 }
 
-/** Client-side checks that give instant feedback; the API validates again. */
-export function validateForm(
+function applyTransportIntent(form: SearchFormState, intent: TravelIntent): SearchFormState {
+    let next = form;
+    if (intent.transportModes) next = { ...next, modes: [...intent.transportModes] };
+    if (intent.directFlightsOnly) next = { ...next, directOnly: true };
+    if (intent.outboundTimes?.length) next = { ...next, outboundTimes: [...intent.outboundTimes] };
+    if (intent.returnTimes?.length) next = { ...next, returnTimes: [...intent.returnTimes] };
+    return next;
+}
+
+function applyDrivingAndWeatherIntent(
     form: SearchFormState,
-): Partial<Record<keyof SearchFormState, string>> {
-    const e: Partial<Record<keyof SearchFormState, string>> = {};
-    if (form.dateMode === 'EXACT' && nightsBetween(form.checkIn, form.checkOut) < 1)
-        e.checkOut = 'Check-out must be after check-in.';
+    intent: TravelIntent,
+): SearchFormState {
+    let next = form;
+    if (intent.maxDrivingHours) next = { ...next, maxDrivingHours: String(intent.maxDrivingHours) };
+    if (intent.minAvgHighC !== undefined) {
+        next = { ...next, minAvgHighC: String(intent.minAvgHighC) };
+    }
+    return next;
+}
+
+/** Applies an AI interpretation to the form. Every applied requirement stays marked as AI until the user edits it. */
+export function applyIntent(
+    form: SearchFormState,
+    intent: TravelIntent,
+    destinationIds: readonly string[] = [],
+): SearchFormState {
+    let next = applyDestinationIntent(form, intent, destinationIds);
+    next = applyParkIntent(next, intent);
+    next = applyRequirementIntent(next, intent);
+    next = applyTravellerIntent(next, intent);
+    next = applyDateIntent(next, intent);
+    next = applyTransportIntent(next, intent);
+    return applyDrivingAndWeatherIntent(next, intent);
+}
+
+type FormErrors = Partial<Record<keyof SearchFormState, string>>;
+
+function dateErrors(form: SearchFormState): FormErrors {
+    const e: FormErrors = {};
+    if (form.dateMode === 'EXACT') {
+        if (nightsBetween(form.checkIn, form.checkOut) < 1) {
+            e.checkOut = 'Check-out must be after check-in.';
+        }
+        return e;
+    }
     const days = weekdaysOf(form);
     if (days) {
-        if (countPatternTrips(form.windowStart, form.windowEnd, days.departOn, days.returnOn) === 0)
+        if (
+            countPatternTrips(form.windowStart, form.windowEnd, days.departOn, days.returnOn) === 0
+        ) {
             e.windowEnd = 'No trips on those days fit inside this window.';
-    } else if (form.dateMode === 'FLEXIBLE') {
-        if (form.nights < 1) e.nights = 'At least one night.';
-        else if (nightsBetween(form.windowStart, form.windowEnd) < form.nights)
-            e.windowEnd = `The window is shorter than ${form.nights} nights.`;
+        }
+        return e;
     }
+    if (form.nights < 1) {
+        e.nights = 'At least one night.';
+    } else if (nightsBetween(form.windowStart, form.windowEnd) < form.nights) {
+        e.windowEnd = `The window is shorter than ${form.nights} nights.`;
+    }
+    return e;
+}
+
+/** Client-side checks that give instant feedback; the API validates again. */
+export function validateForm(form: SearchFormState): FormErrors {
+    const e: FormErrors = dateErrors(form);
     if (!Number.isFinite(form.budget) || form.budget <= 0) e.budget = 'Enter a budget above zero.';
     if (form.modes.length === 0) e.modes = 'Choose flight, car or both.';
-    if (form.accommodationTypes.length === 0)
+    if (form.accommodationTypes.length === 0) {
         e.accommodationTypes = 'Choose hotels, apartments or both.';
+    }
     if (form.adults < 1) e.adults = 'At least one adult travels.';
-    if (form.destinationMode === 'KNOWN' && form.destinationIds.length === 0)
+    if (form.destinationMode === 'KNOWN' && form.destinationIds.length === 0) {
         e.destinationIds = 'Pick at least one destination.';
+    }
     const pd = optNumber(form.parkDays);
-    if (pd !== undefined && (!Number.isInteger(pd) || pd < 1 || pd > 7))
+    if (pd !== undefined && (!Number.isInteger(pd) || pd < 1 || pd > 7)) {
         e.parkDays = 'Between 1 and 7 days.';
+    }
     return e;
 }
 
