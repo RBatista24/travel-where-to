@@ -1,0 +1,18 @@
+== format
+Checking formatting...
+All matched files use Prettier code style!
+== lint
+== typecheck
+== test
+  duration_ms: 4.833687
+  type: 'test'
+  ...
+1..134
+# tests 134
+# suites 0
+# pass 134
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5718.386112
