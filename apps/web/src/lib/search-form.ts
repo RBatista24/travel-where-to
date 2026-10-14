@@ -343,7 +343,7 @@ function datesFieldsOf(c: SearchCriteria): Partial<SearchFormState> {
 
 function weekdayFieldsOf(
     c: SearchCriteria,
-): Pick<SearchFormState, 'weekdayPreset' | 'departDay' | 'returnDay'> {
+): Partial<Pick<SearchFormState, 'weekdayPreset' | 'departDay' | 'returnDay'>> {
     const weekdays = c.dates.kind === 'FLEXIBLE' ? c.dates.weekdays : undefined;
     if (!weekdays) return { weekdayPreset: 'ANY' };
     const d = weekdays.departOn[0] ?? 5;
