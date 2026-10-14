@@ -15,6 +15,13 @@ const PARTS: {
     { key: 'location', label: 'Location', weight: 8 },
 ];
 
+/** Bar colour by score: strong, middling, weak. */
+function barTone(value: number): string {
+    if (value >= 70) return 'bg-primary';
+    if (value >= 40) return 'bg-primary/60';
+    return 'bg-warning';
+}
+
 export function ScoreBreakdown({ score, className }: { score: Breakdown; className?: string }) {
     return (
         <dl className={cn('grid gap-2.5', className)}>
@@ -35,14 +42,7 @@ export function ScoreBreakdown({ score, className }: { score: Breakdown; classNa
                             aria-hidden
                         >
                             <div
-                                className={cn(
-                                    'h-full rounded-full',
-                                    value >= 70
-                                        ? 'bg-primary'
-                                        : value >= 40
-                                          ? 'bg-primary/60'
-                                          : 'bg-warning',
-                                )}
+                                className={cn('h-full rounded-full', barTone(value))}
                                 style={{ width: `${value}%` }}
                             />
                         </div>
