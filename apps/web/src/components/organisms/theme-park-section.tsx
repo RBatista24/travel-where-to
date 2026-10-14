@@ -34,12 +34,9 @@ export function ThemeParkSection({
     if (picked.length === 0 && !wantsParks) return null;
 
     const days = weekdaysOf(form);
-    const nights =
-        form.dateMode === 'EXACT'
-            ? nightsBetween(form.checkIn, form.checkOut)
-            : days
-              ? patternNights(days.departOn, days.returnOn)
-              : form.nights;
+    let nights = form.nights;
+    if (form.dateMode === 'EXACT') nights = nightsBetween(form.checkIn, form.checkOut);
+    else if (days) nights = patternNights(days.departOn, days.returnOn);
     const maxDays = Math.max(4, ...picked.map((d) => d.park?.maxTicketDays ?? 0));
     const parkNames = picked.length ? picked.map((d) => d.park?.name).join(', ') : 'theme parks';
 
