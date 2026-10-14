@@ -286,7 +286,11 @@ function withoutSource(r: FormRequirement): Requirement {
 function nearestOrigin(point: { readonly lat: number; readonly lon: number }): OriginOption {
     let best = ORIGINS[0] as OriginOption;
     for (const o of ORIGINS) {
-        if (Math.hypot(o.lat - point.lat, o.lon - point.lon) < Math.hypot(best.lat - point.lat, best.lon - point.lon)) best = o;
+        if (
+            Math.hypot(o.lat - point.lat, o.lon - point.lon) <
+            Math.hypot(best.lat - point.lat, best.lon - point.lon)
+        )
+            best = o;
     }
     return best;
 }
@@ -297,8 +301,7 @@ export function fromCriteria(
     base: SearchFormState = defaultForm(),
 ): SearchFormState {
     const origin =
-        ORIGINS.find((o) => o.label === c.origin.label) ??
-        nearestOrigin(c.origin.coordinates);
+        ORIGINS.find((o) => o.label === c.origin.label) ?? nearestOrigin(c.origin.coordinates);
     const travellers = c.travellers;
     const v = c.transport.vehicle;
     return {
