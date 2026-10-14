@@ -1,12 +1,4 @@
 {
-  "apps/web/src/lib/search-form.ts": {
-    "sonarjs/cognitive-complexity": {
-      "count": 3
-    },
-    "sonarjs/no-nested-conditional": {
-      "count": 1
-    }
-  },
   "packages/accommodation-providers/src/MockAccommodationProvider.ts": {
     "sonarjs/cognitive-complexity": {
       "count": 1
