@@ -91,71 +91,106 @@ export class MockFlightProvider implements FlightProvider {
         const quotes: RawQuote[] = [];
         for (const fromCode of req.originAirports) {
             for (const toCode of req.destinationAirports) {
-                const from = this.airports.get(fromCode);
-                const to = this.airports.get(toCode);
-                if (!from || !to || fromCode === toCode) continue;
-                const km = haversineKm(from.coordinates, to.coordinates);
-                if (km < MIN_ROUTE_KM) continue;
-                const routeRng = seededRng(`route:${fromCode}-${toCode}`);
-                const coverage = ROUTE_COVERAGE[fromCode] ?? { served: 0.5, direct: 0.3 };
-                if (routeRng() > coverage.served) continue;
-                const direct = routeRng() <= coverage.direct;
-                // Like a real search with a "non-stop" filter: other routes aren't returned.
-                if (req.preferences?.directOnly && !direct) continue;
-                const stops = direct ? 0 : 1;
-
-                const dateRng: Rng = seededRng(
-                    `price:${fromCode}-${toCode}:${req.outboundDate}:${req.returnDate}`,
-                );
-                const weekday = dayOfWeek(req.outboundDate);
-                const weekdayFactor =
-                    weekday === 5 || weekday === 0
-                        ? 1.15
-                        : weekday === 2 || weekday === 3
-                          ? 0.92
-                          : 1;
-                const season = SEASON_FACTOR[monthOf(req.outboundDate) - 1] ?? 1;
-                let perSeat =
-                    (35 + 0.085 * km) *
-                    season *
-                    weekdayFactor *
-                    between(dateRng, 0.8, 1.25) *
-                    (direct ? 1 : 0.88);
-                if (phase === 'indicative')
-                    perSeat *= between(
-                        seededRng(`ind:${fromCode}-${toCode}:${req.outboundDate}`),
-                        0.9,
-                        1.05,
-                    );
-                const totalCents = Math.round(perSeat * seatFactor) * 100;
-
-                const duration = Math.round(35 + km / 12 + stops * 120);
-                // Time filters behave like a provider's: the schedule shown is one inside the asked windows.
-                const outHour = pickHour(dateRng(), 6, 14, req.preferences?.outboundTimes);
-                const inHour = pickHour(dateRng(), 8, 13, req.preferences?.returnTimes);
-                const id = `${phase}-${fromCode}${toCode}-${req.outboundDate}-${req.returnDate}`;
-                quotes.push({
-                    quoteId: id,
-                    from: fromCode,
-                    to: toCode,
-                    outboundDate: req.outboundDate,
-                    returnDate: req.returnDate,
-                    totalPriceCents: totalCents,
-                    currency: req.currency,
-                    direct,
-                    carrier: CARRIERS[Math.floor(routeRng() * CARRIERS.length)] ?? 'MockAir',
-                    outboundDeparture: `${req.outboundDate}T${String(outHour).padStart(2, '0')}:${dateRng() < 0.5 ? '05' : '40'}`,
-                    outboundDurationMin: duration,
-                    inboundDeparture: `${req.returnDate}T${String(inHour).padStart(2, '0')}:${dateRng() < 0.5 ? '15' : '50'}`,
-                    inboundDurationMin: duration,
-                    stops,
-                    cabinBag: dateRng() < 0.6,
-                    bookingUrl: `https://mock-flights.invalid/book/${id}`,
-                });
+                const pair = this.routeFor(req, fromCode, toCode);
+                if (pair) quotes.push(quoteFor(req, phase, seatFactor, pair));
             }
         }
         return quotes;
     }
+
+    /** The route between two airports if the mock network serves it for these preferences. */
+    private routeFor(
+        req: FlightDiscoveryRequest,
+        fromCode: string,
+        toCode: string,
+    ): RoutePair | undefined {
+        const from = this.airports.get(fromCode);
+        const to = this.airports.get(toCode);
+        if (!from || !to || fromCode === toCode) return undefined;
+        const km = haversineKm(from.coordinates, to.coordinates);
+        if (km < MIN_ROUTE_KM) return undefined;
+        const routeRng = seededRng(`route:${fromCode}-${toCode}`);
+        const coverage = ROUTE_COVERAGE[fromCode] ?? { served: 0.5, direct: 0.3 };
+        if (routeRng() > coverage.served) return undefined;
+        const direct = routeRng() <= coverage.direct;
+        // Like a real search with a "non-stop" filter: other routes aren't returned.
+        if (req.preferences?.directOnly && !direct) return undefined;
+        const dateRng: Rng = seededRng(
+            `price:${fromCode}-${toCode}:${req.outboundDate}:${req.returnDate}`,
+        );
+        return { fromCode, toCode, km, direct, routeRng, dateRng };
+    }
+}
+
+/** Route facts shared by the price, schedule and carrier draws. */
+interface RoutePair {
+    readonly fromCode: string;
+    readonly toCode: string;
+    readonly km: number;
+    readonly direct: boolean;
+    readonly routeRng: Rng;
+    readonly dateRng: Rng;
+}
+
+function weekdayFactorFor(date: string): number {
+    const weekday = dayOfWeek(date);
+    if (weekday === 5 || weekday === 0) return 1.15;
+    if (weekday === 2 || weekday === 3) return 0.92;
+    return 1;
+}
+
+function totalPriceCents(
+    req: FlightDiscoveryRequest,
+    phase: 'indicative' | 'live',
+    seatFactor: number,
+    pair: RoutePair,
+): number {
+    const { fromCode, toCode, km, direct, dateRng } = pair;
+    const season = SEASON_FACTOR[monthOf(req.outboundDate) - 1] ?? 1;
+    let perSeat =
+        (35 + 0.085 * km) *
+        season *
+        weekdayFactorFor(req.outboundDate) *
+        between(dateRng, 0.8, 1.25) *
+        (direct ? 1 : 0.88);
+    if (phase === 'indicative') {
+        perSeat *= between(seededRng(`ind:${fromCode}-${toCode}:${req.outboundDate}`), 0.9, 1.05);
+    }
+    return Math.round(perSeat * seatFactor) * 100;
+}
+
+function quoteFor(
+    req: FlightDiscoveryRequest,
+    phase: 'indicative' | 'live',
+    seatFactor: number,
+    pair: RoutePair,
+): RawQuote {
+    const { fromCode, toCode, km, direct, routeRng, dateRng } = pair;
+    const totalCents = totalPriceCents(req, phase, seatFactor, pair);
+    const stops = direct ? 0 : 1;
+    const duration = Math.round(35 + km / 12 + stops * 120);
+    // Time filters behave like a provider's: the schedule shown is one inside the asked windows.
+    const outHour = pickHour(dateRng(), 6, 14, req.preferences?.outboundTimes);
+    const inHour = pickHour(dateRng(), 8, 13, req.preferences?.returnTimes);
+    const id = `${phase}-${fromCode}${toCode}-${req.outboundDate}-${req.returnDate}`;
+    return {
+        quoteId: id,
+        from: fromCode,
+        to: toCode,
+        outboundDate: req.outboundDate,
+        returnDate: req.returnDate,
+        totalPriceCents: totalCents,
+        currency: req.currency,
+        direct,
+        carrier: CARRIERS[Math.floor(routeRng() * CARRIERS.length)] ?? 'MockAir',
+        outboundDeparture: `${req.outboundDate}T${String(outHour).padStart(2, '0')}:${dateRng() < 0.5 ? '05' : '40'}`,
+        outboundDurationMin: duration,
+        inboundDeparture: `${req.returnDate}T${String(inHour).padStart(2, '0')}:${dateRng() < 0.5 ? '15' : '50'}`,
+        inboundDurationMin: duration,
+        stops,
+        cabinBag: dateRng() < 0.6,
+        bookingUrl: `https://mock-flights.invalid/book/${id}`,
+    };
 }
 
 /** Default: `base + floor(r × span)`. With time windows: an hour inside them, from the same random draw. */
