@@ -46,11 +46,6 @@
       "count": 1
     }
   },
-  "packages/domain/src/criteria.ts": {
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    }
-  },
   "packages/flight-providers/src/MockFlightProvider.ts": {
     "sonarjs/cognitive-complexity": {
       "count": 1
