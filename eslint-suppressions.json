@@ -1,12 +1,4 @@
 {
-  "packages/ranking/src/components.ts": {
-    "sonarjs/cognitive-complexity": {
-      "count": 2
-    },
-    "sonarjs/no-nested-conditional": {
-      "count": 3
-    }
-  },
   "packages/search-engine/src/SearchEngine.ts": {
     "sonarjs/cognitive-complexity": {
       "count": 3
