@@ -44,11 +44,6 @@
       "count": 1
     }
   },
-  "packages/llm/src/MockLlmProvider.ts": {
-    "sonarjs/cognitive-complexity": {
-      "count": 1
-    }
-  },
   "packages/ranking/src/components.ts": {
     "sonarjs/cognitive-complexity": {
       "count": 2
