@@ -11,26 +11,31 @@ import { PageLayout } from '@/components/templates/page-layout';
 import { useRecentSearches } from '@/hooks/queries';
 
 export function RecentSearchesPage() {
-  const searches = useRecentSearches();
-  return (
-    <PageLayout title="Recent searches" description="Every search is kept with its results, so you can reopen or change it.">
-      {searches.status === 'loading' && <Skeleton className="h-48 w-full" />}
-      {searches.status === 'error' && <ErrorState error={searches.error} onRetry={searches.reload} />}
-      {searches.status === 'success' &&
-        (searches.data.length === 0 ? (
-          <EmptyState
-            icon={<HistoryIcon />}
-            title="No searches yet"
-            description="Your searches show up here once you run one."
-            action={
-              <Button asChild>
-                <Link href="/">Start a search</Link>
-              </Button>
-            }
-          />
-        ) : (
-          <RecentSearchesList searches={searches.data} />
-        ))}
-    </PageLayout>
-  );
+    const searches = useRecentSearches();
+    return (
+        <PageLayout
+            title="Recent searches"
+            description="Every search is kept with its results, so you can reopen or change it."
+        >
+            {searches.status === 'loading' && <Skeleton className="h-48 w-full" />}
+            {searches.status === 'error' && (
+                <ErrorState error={searches.error} onRetry={searches.reload} />
+            )}
+            {searches.status === 'success' &&
+                (searches.data.length === 0 ? (
+                    <EmptyState
+                        icon={<HistoryIcon />}
+                        title="No searches yet"
+                        description="Your searches show up here once you run one."
+                        action={
+                            <Button asChild>
+                                <Link href="/">Start a search</Link>
+                            </Button>
+                        }
+                    />
+                ) : (
+                    <RecentSearchesList searches={searches.data} />
+                ))}
+        </PageLayout>
+    );
 }

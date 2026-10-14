@@ -1,14 +1,14 @@
 import type {
-  AccommodationOffer,
-  AccommodationSearchRequest,
-  FlightDiscoveryRequest,
-  FlightOffer,
-  FlightSearchRequest,
-  IndicativeFlightResult,
-  RouteRequest,
-  RouteResult,
-  WeatherRequest,
-  WeatherResult,
+    AccommodationOffer,
+    AccommodationSearchRequest,
+    FlightDiscoveryRequest,
+    FlightOffer,
+    FlightSearchRequest,
+    IndicativeFlightResult,
+    RouteRequest,
+    RouteResult,
+    WeatherRequest,
+    WeatherResult,
 } from './offers';
 
 /**
@@ -16,9 +16,9 @@ import type {
  * their own packages and must map provider-specific payloads to these models.
  */
 export interface FlightProvider {
-  readonly name: string;
-  searchIndicative(request: FlightDiscoveryRequest): Promise<IndicativeFlightResult[]>;
-  searchLive(request: FlightSearchRequest): Promise<FlightOffer[]>;
+    readonly name: string;
+    searchIndicative(request: FlightDiscoveryRequest): Promise<IndicativeFlightResult[]>;
+    searchLive(request: FlightSearchRequest): Promise<FlightOffer[]>;
 }
 
 /**
@@ -28,35 +28,30 @@ export interface FlightProvider {
 export type LiveFlightProvider = Pick<FlightProvider, 'name' | 'searchLive'>;
 
 export interface AccommodationProvider {
-  readonly name: string;
-  search(request: AccommodationSearchRequest): Promise<AccommodationOffer[]>;
+    readonly name: string;
+    search(request: AccommodationSearchRequest): Promise<AccommodationOffer[]>;
 }
 
 export interface RoutingProvider {
-  readonly name: string;
-  calculateRoute(request: RouteRequest): Promise<RouteResult>;
+    readonly name: string;
+    calculateRoute(request: RouteRequest): Promise<RouteResult>;
 }
 
 export interface WeatherProvider {
-  readonly name: string;
-  getForecast(request: WeatherRequest): Promise<WeatherResult>;
+    readonly name: string;
+    getForecast(request: WeatherRequest): Promise<WeatherResult>;
 }
 
 export type ProviderErrorKind =
-  | 'TIMEOUT'
-  | 'RATE_LIMITED'
-  | 'UNAVAILABLE'
-  | 'AUTHENTICATION'
-  | 'INVALID_RESPONSE'
-  | 'UNKNOWN';
+    'TIMEOUT' | 'RATE_LIMITED' | 'UNAVAILABLE' | 'AUTHENTICATION' | 'INVALID_RESPONSE' | 'UNKNOWN';
 
 export class ProviderError extends Error {
-  constructor(
-    readonly provider: string,
-    readonly kind: ProviderErrorKind,
-    message: string,
-  ) {
-    super(`[${provider}] ${kind}: ${message}`);
-    this.name = 'ProviderError';
-  }
+    constructor(
+        readonly provider: string,
+        readonly kind: ProviderErrorKind,
+        message: string,
+    ) {
+        super(`[${provider}] ${kind}: ${message}`);
+        this.name = 'ProviderError';
+    }
 }

@@ -4,11 +4,17 @@ import type { NextConfig } from 'next';
 const apiUrl = process.env.TRAVEL_API_URL ?? 'http://localhost:4000';
 
 const config: NextConfig = {
-  // Workspace packages are shipped as TypeScript source.
-  transpilePackages: ['@travel-where-to/shared', '@travel-where-to/domain', '@travel-where-to/ranking'],
-  async rewrites() {
-    return [{ source: '/api/:path*', destination: `${apiUrl}/api/:path*` }];
-  },
+    // Lint runs once for the whole workspace (`pnpm lint`, with its suppressions file), not again inside the build.
+    eslint: { ignoreDuringBuilds: true },
+    // Workspace packages are shipped as TypeScript source.
+    transpilePackages: [
+        '@travel-where-to/shared',
+        '@travel-where-to/domain',
+        '@travel-where-to/ranking',
+    ],
+    async rewrites() {
+        return [{ source: '/api/:path*', destination: `${apiUrl}/api/:path*` }];
+    },
 };
 
 export default config;
