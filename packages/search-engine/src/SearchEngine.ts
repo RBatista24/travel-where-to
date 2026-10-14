@@ -944,6 +944,7 @@ export class SearchEngine {
         verifierName: string,
     ): void {
         const t = b.top.transport;
+        if (t.mode !== 'FLIGHT') return;
         const nights = daysBetween(b.top.stay.checkIn, b.top.stay.checkOut);
         const acc = { airport: t.departureAirport, route: t.airportAccess };
         const transport: TransportOption = {
