@@ -1,0 +1,22 @@
+{
+  "name": "@travel-where-to/search-engine",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@travel-where-to/shared": "workspace:*",
+    "@travel-where-to/domain": "workspace:*",
+    "@travel-where-to/pricing": "workspace:*",
+    "@travel-where-to/ranking": "workspace:*",
+    "@travel-where-to/destination-engine": "workspace:*"
+  },
+  "devDependencies": {
+    "@travel-where-to/flight-providers": "workspace:*",
+    "@travel-where-to/accommodation-providers": "workspace:*",
+    "@travel-where-to/routing-providers": "workspace:*",
+    "@travel-where-to/weather-providers": "workspace:*"
+  }
+}

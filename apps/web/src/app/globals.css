@@ -1,0 +1,160 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Travel Where To theme.
+ * Base: shadcn/ui token names, recoloured with an Atlantic palette (ink, azulejo blue, paper).
+ * Trust tokens: every value on screen is one of four kinds of information (spec §55),
+ * and each kind has its own colour AND its own line style so it never relies on colour alone:
+ *   verified   — provider fact          → solid line,  sea-glass
+ *   indicative — provider, not bookable → solid line,  azulejo blue
+ *   estimated  — calculated by us       → dashed line, amber
+ *   ai         — AI interpretation      → dotted line, violet
+ */
+:root {
+  --radius: 0.75rem;
+  --background: #f5f7fa;
+  --foreground: #13213c;
+  --card: #ffffff;
+  --card-foreground: #13213c;
+  --popover: #ffffff;
+  --popover-foreground: #13213c;
+  --primary: #13213c;
+  --primary-foreground: #f5f7fa;
+  --secondary: #e8edf4;
+  --secondary-foreground: #13213c;
+  --muted: #edf1f6;
+  --muted-foreground: #586680;
+  --accent: #e4ecf8;
+  --accent-foreground: #13213c;
+  --destructive: #b93a26;
+  --destructive-soft: #fbe9e5;
+  --border: #dbe2eb;
+  --input: #cbd5e1;
+  --ring: #1e5bb8;
+
+  --azulejo: #1e5bb8;
+  --azulejo-soft: #e4ecf8;
+  --marigold: #f2b33d;
+  --marigold-soft: #fdf3dc;
+
+  --verified: #1d7466;
+  --verified-soft: #e0f2ee;
+  --indicative: #1e5bb8;
+  --indicative-soft: #e4ecf8;
+  --estimated: #94600f;
+  --estimated-soft: #fbf0db;
+  --ai: #6a4bc4;
+  --ai-soft: #eee9fb;
+
+  --success: var(--verified);
+  --success-soft: var(--verified-soft);
+  --warning: #9a5a07;
+  --warning-soft: #fcf0dc;
+}
+
+.dark {
+  --background: #0c1628;
+  --foreground: #e8eef7;
+  --card: #13213c;
+  --card-foreground: #e8eef7;
+  --popover: #13213c;
+  --popover-foreground: #e8eef7;
+  --primary: #e8eef7;
+  --primary-foreground: #13213c;
+  --secondary: #1d2e4d;
+  --secondary-foreground: #e8eef7;
+  --muted: #1a2a46;
+  --muted-foreground: #9aa8c0;
+  --accent: #1d2e4d;
+  --accent-foreground: #e8eef7;
+  --destructive: #f07a63;
+  --destructive-soft: #3b1d19;
+  --border: #253757;
+  --input: #2d4166;
+  --ring: #6f9be0;
+  --azulejo: #6f9be0;
+  --azulejo-soft: #1a2d4f;
+  --marigold: #f2b33d;
+  --marigold-soft: #3a2e14;
+  --verified: #5cc2ae;
+  --verified-soft: #12312d;
+  --indicative: #6f9be0;
+  --indicative-soft: #1a2d4f;
+  --estimated: #e5ad4f;
+  --estimated-soft: #362812;
+  --ai: #a990f0;
+  --ai-soft: #2a2148;
+  --warning: #e5ad4f;
+  --warning-soft: #362812;
+}
+
+@theme inline {
+  --font-sans: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-heading), var(--font-body), ui-sans-serif, system-ui, sans-serif;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-soft: var(--destructive-soft);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-azulejo: var(--azulejo);
+  --color-azulejo-soft: var(--azulejo-soft);
+  --color-marigold: var(--marigold);
+  --color-marigold-soft: var(--marigold-soft);
+  --color-verified: var(--verified);
+  --color-verified-soft: var(--verified-soft);
+  --color-indicative: var(--indicative);
+  --color-indicative-soft: var(--indicative-soft);
+  --color-estimated: var(--estimated);
+  --color-estimated-soft: var(--estimated-soft);
+  --color-ai: var(--ai);
+  --color-ai-soft: var(--ai-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-feature-settings: "ss01";
+  }
+  h1, h2, h3 {
+    @apply font-display;
+    text-wrap: balance;
+  }
+  /* Prices and scores line up in columns. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}

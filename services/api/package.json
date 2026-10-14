@@ -1,0 +1,23 @@
+{
+  "name": "@travel-where-to/api",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/main.ts",
+    "start": "tsx src/main.ts"
+  },
+  "dependencies": {
+    "@travel-where-to/shared": "workspace:*",
+    "@travel-where-to/domain": "workspace:*",
+    "@travel-where-to/destination-engine": "workspace:*",
+    "@travel-where-to/flight-providers": "workspace:*",
+    "@travel-where-to/accommodation-providers": "workspace:*",
+    "@travel-where-to/routing-providers": "workspace:*",
+    "@travel-where-to/weather-providers": "workspace:*",
+    "@travel-where-to/search-engine": "workspace:*",
+    "zod": "^3.25.0",
+    "@travel-where-to/ranking": "workspace:*",
+    "@travel-where-to/llm": "workspace:*"
+  }
+}
