@@ -231,7 +231,7 @@ test('MUST_HAVE failures are hard exclusions', () => {
         ).length > 0,
     );
     // Missing data never passes a hard filter.
-    const { rating: _omit, ...unrated } = hotel;
+    const unrated = { ...hotel, rating: undefined };
     assert.ok(
         accommodationFailures(unrated, criteria.accommodation, criteria.requirements).length > 0,
     );

@@ -98,7 +98,8 @@ export function relaxationCandidates(c: SearchCriteria): Candidate[] {
         });
     } else {
         if (c.dates.weekdays) {
-            const { weekdays: _w, ...rest } = c.dates;
+            const { kind, windowStart, windowEnd, nights } = c.dates;
+            const rest = { kind, windowStart, windowEnd, nights };
             out.push({
                 code: 'ANY_WEEKDAYS',
                 description: `Any days of the week (${rest.nights} nights)`,

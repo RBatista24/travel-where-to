@@ -51,5 +51,5 @@ result.recommendations.forEach((r, i) => {
 if (result.notices.length) console.log(`\nNotices:\n  ${result.notices.join('\n  ')}`);
 if (result.relaxations.length)
     console.log(
-        `\nTry instead:\n  ${result.relaxations.map((s) => `${s.description} → ${s.resultCount} options`).join('\n  ')}`,
+        `\nTry instead:\n  ${result.relaxations.map((s) => s.description + ' → ' + s.resultCount + ' options').join('\n  ')}`,
     );

@@ -414,7 +414,7 @@ export class TravelpayoutsFlightProvider implements FlightProvider {
         to?: string,
     ): string {
         const s = this.seats(req);
-        const block = `${Math.min(s.adults, 9)}${s.children}${s.infants}`.replace(/0+$/, '') || '1';
+        const block = trimTrailing(`${Math.min(s.adults, 9)}${s.children}${s.infants}`, '0') || '1';
         const base = this.options.linkBaseUrl ?? 'https://www.aviasales.com';
         let path = t?.link;
         const m = path
@@ -514,4 +514,11 @@ function matchesTimes(t: TpTicket, prefs: FlightPreferences | undefined): boolea
 function nextMonth(month: string): string {
     const [y, m] = month.split('-').map(Number) as [number, number];
     return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`;
+}
+
+/** `s` without trailing `ch` characters. */
+function trimTrailing(s: string, ch: string): string {
+    let end = s.length;
+    while (end > 0 && s[end - 1] === ch) end -= 1;
+    return s.slice(0, end);
 }

@@ -85,7 +85,7 @@ try {
         for (const [k, v] of [...byIssue].sort((a, b) => b[1].n - a[1].n))
             console.log(`  ${v.n} × ${k} (${v.places.size} places)\n      e.g. ${v.example}`);
     } else console.log('\nNo provider errors.');
-    if (r.notices.length) console.log(`\nNotices:\n${r.notices.map((n) => `  - ${n}`).join('\n')}`);
+    if (r.notices.length) console.log(`\nNotices:\n${r.notices.map((n) => '  - ' + n).join('\n')}`);
 } catch (e) {
     console.error(
         `Couldn't read the search from ${base}: ${e instanceof Error ? e.message : String(e)}. Is \`pnpm dev\` running?`,

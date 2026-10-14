@@ -35,8 +35,8 @@ export function InfoTag({
     return (
         <Tooltip>
             <TooltipTrigger asChild>
-                <span
-                    tabIndex={0}
+                <button
+                    type="button"
                     className={cn(
                         'inline-flex shrink-0 cursor-help items-center gap-1 rounded-full border-[1.5px] px-2 py-0.5 text-[0.7rem] leading-none font-medium whitespace-nowrap outline-none focus-visible:ring-[3px] focus-visible:ring-ring',
                         STYLE[kind],
@@ -50,7 +50,7 @@ export function InfoTag({
                     ) : (
                         INFO_KIND[kind].label
                     )}
-                </span>
+                </button>
             </TooltipTrigger>
             <TooltipContent>{INFO_KIND[kind].explanation}</TooltipContent>
         </Tooltip>

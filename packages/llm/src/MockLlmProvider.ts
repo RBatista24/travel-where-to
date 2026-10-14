@@ -130,23 +130,16 @@ export class MockLlmProvider implements LlmProvider {
                 }
             }
             const structured =
-                /€|°/.test(clause) ||
-                /\b(europe|european|long[- ]haul|far away|caribbean|brazil|mexico|america|americas|usa|africa|asia|middle east|indian ocean|dubai|thailand|bali|maldives|mauritius|cuba|egypt|direct|non[- ]?stop|mornings?|afternoons?|evenings?|weekends?|monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|tues|wed|thu|thurs|fri|sat|sun|eur|euros?|budget|nights?|adults?|child|children|kids|infants?|baby|babies|hours?|fly|flights?|car|drive|driving|warm|hot|sunny|degrees|disney|disneyland|paris|rome|london|madeira|funchal|azores|tenerife|marrakech|marrakesh|cape verde|salvador|fortaleza|rio|punta cana|canc[uú]n|varadero|orlando|new york|antalya|hurghada|djerba|zanzibar|cape town|phuket|park|parks|resort|tickets?|days?)\b/.test(
-                    clause,
-                ) ||
+                /[€°]/.test(clause) ||
+                mentionsStructuredTerm(clause) ||
                 MONTHS.some((m) => clause.includes(m));
             if (!matched && !structured && clause.split(' ').length > 1) unmapped.push(clause);
         }
 
         const out: Record<string, unknown> = { requirements, unmapped };
 
-        const budget = /(?:€\s?([\d.,]+)|([\d.,]+)\s?(?:€|eur|euros?))/.exec(text);
-        if (budget) {
-            const amount = Number(
-                (budget[1] ?? budget[2] ?? '').replace(/[.,](?=\d{3}\b)/g, '').replace(',', '.'),
-            );
-            if (amount > 0) out.budget = { amount, currency: 'EUR' };
-        }
+        const amount = statedBudget(text);
+        if (amount !== undefined) out.budget = { amount, currency: 'EUR' };
         const nights = /\b(\d+|one|two|three|four|five|six|seven|eight|nine|ten) nights?\b/.exec(
             text,
         );
@@ -226,10 +219,9 @@ export class MockLlmProvider implements LlmProvider {
         )
             out.parkHotelsOnly = true;
         const parkDays =
-            /\b(\d|one|two|three|four|five) (?:park )?days? (?:in|at) the parks?\b|\b(\d|one|two|three|four|five)[- ]day (?:park )?tickets?\b/.exec(
-                text,
-            );
-        if (parkDays) out.parkDays = num((parkDays[1] ?? parkDays[2]) as string);
+            /\b(\d|one|two|three|four|five) (?:park )?days? (?:in|at) the parks?\b/.exec(text) ??
+            /\b(\d|one|two|three|four|five)[- ]day (?:park )?tickets?\b/.exec(text);
+        if (parkDays?.[1]) out.parkDays = num(parkDays[1]);
 
         // ---- Where in the world ----
         const regions = new Set<string>();
@@ -310,6 +302,44 @@ export class MockLlmProvider implements LlmProvider {
         const warn = input.reasons
             .filter((r) => r.tone === 'WARNING')
             .map((r) => r.message.toLowerCase());
-        return `${input.destinationName} scores ${input.score.total}%${good.length ? `: ${good.slice(0, 3).join(', ')}` : ''}${warn.length ? `. Watch out: ${warn.join(', ')}` : ''}.`;
+        const goodPart = good.length ? ': ' + good.slice(0, 3).join(', ') : '';
+        const warnPart = warn.length ? '. Watch out: ' + warn.join(', ') : '';
+        return `${input.destinationName} scores ${input.score.total}%${goodPart}${warnPart}.`;
     }
+}
+
+/** Words and phrases the structured fields below already understand (so the clause is not "unmapped"). */
+const STRUCTURED_TERMS = [
+    'europe', 'european', 'long haul', 'far away', 'caribbean', 'brazil', 'mexico', 'america', 'americas',
+    'usa', 'africa', 'asia', 'middle east', 'indian ocean', 'dubai', 'thailand', 'bali', 'maldives',
+    'mauritius', 'cuba', 'egypt', 'direct', 'non stop', 'nonstop', 'morning', 'mornings', 'afternoon',
+    'afternoons', 'evening', 'evenings', 'weekend', 'weekends', 'monday', 'tuesday', 'wednesday',
+    'thursday', 'friday', 'saturday', 'sunday', 'mon', 'tue', 'tues', 'wed', 'thu', 'thurs', 'fri', 'sat',
+    'sun', 'eur', 'euro', 'euros', 'budget', 'night', 'nights', 'adult', 'adults', 'child', 'children',
+    'kids', 'infant', 'infants', 'baby', 'babies', 'hour', 'hours', 'fly', 'flight', 'flights', 'car',
+    'drive', 'driving', 'warm', 'hot', 'sunny', 'degrees', 'disney', 'disneyland', 'paris', 'rome',
+    'london', 'madeira', 'funchal', 'azores', 'tenerife', 'marrakech', 'marrakesh', 'cape verde',
+    'salvador', 'fortaleza', 'rio', 'punta cana', 'cancun', 'cancún', 'varadero', 'orlando', 'new york',
+    'antalya', 'hurghada', 'djerba', 'zanzibar', 'cape town', 'phuket', 'park', 'parks', 'resort',
+    'ticket', 'tickets', 'day', 'days',
+];
+
+function mentionsStructuredTerm(clause: string): boolean {
+    const words = ` ${clause.replace(/[^\p{L}\p{N}]+/gu, ' ').trim()} `;
+    return STRUCTURED_TERMS.some((term) => words.includes(` ${term} `));
+}
+
+/** The first amount written next to a euro sign or "eur"/"euros", e.g. "€1,000" or "1000 euros". */
+function statedBudget(text: string): number | undefined {
+    for (const m of text.matchAll(/\d[\d.,]*/g)) {
+        const start = m.index ?? 0;
+        const end = start + m[0].length;
+        const before = text.slice(Math.max(0, start - 2), start).trimEnd();
+        const after = text.slice(end, end + 4).trimStart();
+        if (before.endsWith('€') || after.startsWith('€') || after.startsWith('eur')) {
+            const amount = Number(m[0].replace(/[.,](?=\d{3}\b)/g, '').replace(',', '.'));
+            return amount > 0 ? amount : undefined;
+        }
+    }
+    return undefined;
 }

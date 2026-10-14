@@ -10,7 +10,7 @@ import tseslint from 'typescript-eslint';
 /**
  * One lint run for the whole workspace (REF-Frontend §10): TypeScript rules,
  * the Sonar default rules, React hooks and jsx-a11y strict for the web app.
- * Every rule is an error; a blanket eslint-disable and NOSONAR fail the run.
+ * Every rule is an error; a blanket eslint-disable or a Sonar suppression comment fails the run.
  */
 export default tseslint.config(
     {

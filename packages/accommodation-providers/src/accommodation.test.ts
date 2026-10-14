@@ -31,7 +31,7 @@ test('mock accommodation is deterministic and attributed', async () => {
 
 test('type filter is passed to the provider; no beach reference → no beach distance', async () => {
     const p = new MockAccommodationProvider({ clock: fixedClock(now) });
-    const { beach: _b, ...inland } = req;
+    const inland = { ...req, beach: undefined };
     const r = await p.search({ ...inland, types: ['APARTMENT'] });
     assert.ok(r.every((o) => o.type === 'APARTMENT' && o.distanceToBeachM === undefined));
 });

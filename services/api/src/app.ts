@@ -27,6 +27,12 @@ class HttpError extends Error {
     }
 }
 
+function withoutTrailingSlashes(s: string): string {
+    let end = s.length;
+    while (end > 0 && s[end - 1] === '/') end -= 1;
+    return s.slice(0, end);
+}
+
 function send(res: ServerResponse, status: number, body: unknown): void {
     const json = JSON.stringify(body);
     res.writeHead(status, {
@@ -86,7 +92,7 @@ export function createApp(deps: AppDeps): Server {
     return createServer(async (req, res) => {
         try {
             const url = new URL(req.url ?? '/', 'http://localhost');
-            const path = url.pathname.replace(/\/+$/, '') || '/';
+            const path = withoutTrailingSlashes(url.pathname) || '/';
 
             if (req.method === 'GET' && path === '/health') return send(res, 200, { status: 'ok' });
 

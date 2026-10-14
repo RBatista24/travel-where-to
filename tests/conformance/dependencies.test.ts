@@ -101,15 +101,25 @@ function sourceFiles(dir: string): string[] {
     });
 }
 
-const IMPORT_PATTERNS = [
-    /^\s*(?:import|export)\s[^;]*?\sfrom\s+['"]([^'"]+)['"]/gm,
-    /^\s*import\s+['"]([^'"]+)['"]/gm,
-    /\bimport\(\s*['"]([^'"]+)['"]\s*\)/g,
-];
+const DYNAMIC_IMPORT = /\bimport\(\s*['"]([^'"]+)['"]\s*\)/g;
+const FROM_CLAUSE = /\bfrom\s*['"]([^'"]+)['"]$/;
 
+/** Module specifiers of a file's static imports and re-exports, and of its dynamic imports. */
 function importsOf(file: string): string[] {
     const text = readFileSync(file, 'utf8');
-    return IMPORT_PATTERNS.flatMap((re) => [...text.matchAll(re)].map((m) => m[1] ?? ''));
+    const found: string[] = [];
+    for (const chunk of text.split(';')) {
+        const lines = chunk.split('\n');
+        const first = lines.findIndex((l) => /^(import|export)\b/.test(l.trimStart()));
+        if (first === -1) continue;
+        const statement = lines.slice(first).join('\n').trim();
+        const sideEffect = /^import\s*['"]([^'"]+)['"]$/.exec(statement);
+        const from = FROM_CLAUSE.exec(statement);
+        const spec = sideEffect?.[1] ?? from?.[1];
+        if (spec) found.push(spec);
+    }
+    for (const m of text.matchAll(DYNAMIC_IMPORT)) if (m[1]) found.push(m[1]);
+    return found;
 }
 
 const isTest = (file: string) => /\.test\.tsx?$/.test(file);

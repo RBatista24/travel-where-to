@@ -70,6 +70,11 @@ export const api = {
         }),
 };
 
+function detailLine(d: { path?: string; message: unknown }): string {
+    const prefix = d.path ? `${d.path}: ` : '';
+    return `${prefix}${String(d.message)}`;
+}
+
 /** Turn validation details from the API into readable lines. */
 export function errorLines(error: unknown): string[] {
     if (!(error instanceof ApiError))
@@ -79,7 +84,7 @@ export function errorLines(error: unknown): string[] {
               typeof d === 'string'
                   ? d
                   : typeof d === 'object' && d && 'message' in d
-                    ? `${(d as { path?: string }).path ? `${(d as { path: string }).path}: ` : ''}${String((d as { message: unknown }).message)}`
+                    ? detailLine(d as { path?: string; message: unknown })
                     : JSON.stringify(d),
           )
         : [];

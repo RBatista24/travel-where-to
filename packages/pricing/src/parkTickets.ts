@@ -40,6 +40,7 @@ export function estimateParkTickets(
     const payers = c.adults + kidAges.length - free;
     const mid = Math.round((min + max) / 2);
     const capped = requestedDays > days ? ` Longest ticket sold is ${days} days.` : '';
+    const freeNote = free ? `; ${free} under ${t.freeUnderAge} free` : '';
     return {
         requestedDays,
         days,
@@ -53,7 +54,7 @@ export function estimateParkTickets(
             countsTowardsBudget: true,
             basis:
                 `~€${mid} per person, middle of the published €${min}–€${max} range (price depends on the date) × ${payers} ${payers === 1 ? 'person' : 'people'}` +
-                `${free ? `; ${free} under ${t.freeUnderAge} free` : ''}; child tickets priced as adult (usually a little cheaper).${capped} Check the exact price on the official site.`,
+                `${freeNote}; child tickets priced as adult (usually a little cheaper).${capped} Check the exact price on the official site.`,
             link: t.officialUrl,
         },
     };

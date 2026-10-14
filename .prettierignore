@@ -7,3 +7,4 @@ apps/web/next-env.d.ts
 *.md
 *.yml
 *.yaml
+eslint-suppressions.json

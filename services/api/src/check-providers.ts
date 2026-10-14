@@ -135,7 +135,13 @@ if (want('liteapi', !!LITEAPI)) {
         const cheapest = [...offers]
             .sort((a, b) => a.price.amount.amountMinor - b.price.amount.amountMinor)
             .slice(0, 3);
-        return `${offers.length} hotels with rates. Cheapest: ${cheapest.map((o) => `${o.name} ${formatMoney(o.price.amount)}${o.rating ? ` (${o.rating})` : ''}`).join('; ') || '-'}`;
+        const listed = cheapest
+            .map((o) => {
+                const rating = o.rating ? ` (${o.rating})` : '';
+                return `${o.name} ${formatMoney(o.price.amount)}${rating}`;
+            })
+            .join('; ');
+        return `${offers.length} hotels with rates. Cheapest: ${listed || '-'}`;
     });
 }
 

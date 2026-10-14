@@ -45,7 +45,10 @@ createApp({
             ? `Settings from ${envFiles.join(', ')}`
             : 'No .env found: every provider is a mock.',
     );
+    const liveCheck = providers.flightVerifier
+        ? ` (top ${verifyTop} checked live with ${providers.flightVerifier.name})`
+        : '';
     console.log(
-        `Providers → flights: ${providers.flights.name}${providers.flightVerifier ? ` (top ${verifyTop} checked live with ${providers.flightVerifier.name})` : ''}, stays: ${providers.accommodation.name}, routes: ${providers.routing.name}, weather: ${providers.weather.name}`,
+        `Providers → flights: ${providers.flights.name}${liveCheck}, stays: ${providers.accommodation.name}, routes: ${providers.routing.name}, weather: ${providers.weather.name}`,
     );
 });

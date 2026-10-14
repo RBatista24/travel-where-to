@@ -90,7 +90,9 @@ export class EstimatedFlightFallback implements FlightProvider {
                     stops,
                     carrier: 'Airline not known yet',
                 });
-                const link = `https://www.google.com/travel/flights?q=${encodeURIComponent(`Flights from ${fromCode} to ${toCode} on ${req.outboundDate} through ${req.returnDate}`)}`;
+                const query = `Flights from ${fromCode} to ${toCode} on ${req.outboundDate} through ${req.returnDate}`;
+                const link = `https://www.google.com/travel/flights?q=${encodeURIComponent(query)}`;
+                const babies = c.infants ? ` + ${c.infants} baby at ~10%` : '';
                 out.push({
                     originAirport: fromCode,
                     destinationAirport: toCode,
@@ -105,7 +107,7 @@ export class EstimatedFlightFallback implements FlightProvider {
                             deepLink: link,
                         },
                     },
-                    priceBasis: `Our estimate: no recent prices for ${fromCode}–${toCode} around these dates. About ${perSeat} ${req.currency} per seat for ${km.toLocaleString('en-IE')} km × ${c.adults + c.children} seat${c.adults + c.children === 1 ? '' : 's'}${c.infants ? ` + ${c.infants} baby at ~10%` : ''}. Check the real price.`,
+                    priceBasis: `Our estimate: no recent prices for ${fromCode}–${toCode} around these dates. About ${perSeat} ${req.currency} per seat for ${km.toLocaleString('en-IE')} km × ${c.adults + c.children} seat${c.adults + c.children === 1 ? '' : 's'}${babies}. Check the real price.`,
                 });
             }
         }

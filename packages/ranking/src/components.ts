@@ -174,7 +174,7 @@ export function scoreAccommodation(
         reasons.push({
             tone: offer.rating >= 8 ? 'POSITIVE' : 'NEUTRAL',
             code: 'RATING',
-            message: `${offer.type === 'HOTEL' ? 'Hotel' : 'Apartment'} rated ${offer.rating.toFixed(1)}${offer.stars ? ` · ${offer.stars}★` : ''}`,
+            message: `${offer.type === 'HOTEL' ? 'Hotel' : 'Apartment'} rated ${offer.rating.toFixed(1)}${starsSuffix(offer.stars)}`,
         });
     }
     let weighted = 0;
@@ -311,4 +311,8 @@ export function comfortScore(offer: AccommodationOffer): number {
     if (offer.stars === undefined) return Math.round(byRating);
     const byStars = lerp(offer.stars, 1, 5, 0, 100);
     return Math.round(0.7 * byStars + 0.3 * byRating);
+}
+
+function starsSuffix(stars: number | undefined): string {
+    return stars ? ` · ${stars}★` : '';
 }

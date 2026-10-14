@@ -245,7 +245,7 @@ export function toSearchRequest(form: SearchFormState): SearchRequest {
             form.destinationMode === 'KNOWN' && form.destinationIds.length > 0
                 ? { kind: 'KNOWN', destinationIds: form.destinationIds }
                 : { kind: 'DISCOVER', ...(form.regions.length ? { regions: form.regions } : {}) },
-        requirements: form.requirements.map(({ source: _source, ...r }) => r),
+        requirements: form.requirements.map(withoutSource),
         accommodation: {
             types: form.accommodationTypes,
             ...(minStars !== undefined ? { minStars } : {}),
@@ -275,6 +275,22 @@ export function toSearchRequest(form: SearchFormState): SearchRequest {
     };
 }
 
+/** The form's requirement without where it came from, as the API takes it. */
+function withoutSource(r: FormRequirement): Requirement {
+    return r.kind === 'DESTINATION'
+        ? { kind: r.kind, attribute: r.attribute, priority: r.priority }
+        : { kind: r.kind, facility: r.facility, priority: r.priority };
+}
+
+/** The listed origin closest to a point (straight-line in degrees is enough at this scale). */
+function nearestOrigin(point: { readonly lat: number; readonly lon: number }): OriginOption {
+    let best = ORIGINS[0] as OriginOption;
+    for (const o of ORIGINS) {
+        if (Math.hypot(o.lat - point.lat, o.lon - point.lon) < Math.hypot(best.lat - point.lat, best.lon - point.lon)) best = o;
+    }
+    return best;
+}
+
 /** Stored criteria (money in minor units) → editable form. */
 export function fromCriteria(
     c: SearchCriteria,
@@ -282,12 +298,7 @@ export function fromCriteria(
 ): SearchFormState {
     const origin =
         ORIGINS.find((o) => o.label === c.origin.label) ??
-        ORIGINS.reduce((best, o) =>
-            Math.hypot(o.lat - c.origin.coordinates.lat, o.lon - c.origin.coordinates.lon) <
-            Math.hypot(best.lat - c.origin.coordinates.lat, best.lon - c.origin.coordinates.lon)
-                ? o
-                : best,
-        );
+        nearestOrigin(c.origin.coordinates);
     const travellers = c.travellers;
     const v = c.transport.vehicle;
     return {
@@ -437,7 +448,7 @@ export function validateForm(
         else if (nightsBetween(form.windowStart, form.windowEnd) < form.nights)
             e.windowEnd = `The window is shorter than ${form.nights} nights.`;
     }
-    if (!(form.budget > 0)) e.budget = 'Enter a budget above zero.';
+    if (!Number.isFinite(form.budget) || form.budget <= 0) e.budget = 'Enter a budget above zero.';
     if (form.modes.length === 0) e.modes = 'Choose flight, car or both.';
     if (form.accommodationTypes.length === 0)
         e.accommodationTypes = 'Choose hotels, apartments or both.';

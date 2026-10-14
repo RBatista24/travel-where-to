@@ -909,8 +909,9 @@ export class SearchEngine {
             }),
         );
         if (targets.length > 0) {
+            const unconfirmedNote = unconfirmed ? `; ${unconfirmed} couldn't be confirmed` : '';
             run.notices.add(
-                `Flight prices of the top ${targets.length} result${targets.length === 1 ? ' were' : 's were'} checked live${unconfirmed ? `; ${unconfirmed} couldn't be confirmed` : ''}. Others are from recent searches.`,
+                `Flight prices of the top ${targets.length} result${targets.length === 1 ? ' were' : 's were'} checked live${unconfirmedNote}. Others are from recent searches.`,
             );
         }
     }
@@ -1076,8 +1077,12 @@ function budgetPicks(
             tag(e, 'full-budget', {
                 tone: 'POSITIVE',
                 code: 'PICK_FULL_BUDGET',
-                message: `Makes the most of your budget: ${used(e)}% of it${e.accommodation.stars ? ` for a ${e.accommodation.stars}★ stay` : ''}`,
+                message: `Makes the most of your budget: ${used(e)}% of it${staySuffix(e.accommodation.stars)}`,
             }),
         ),
     };
+}
+
+function staySuffix(stars: number | undefined): string {
+    return stars ? ` for a ${stars}★ stay` : '';
 }
