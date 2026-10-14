@@ -1,0 +1,68 @@
+# One-off: installs the lint and format toolchain, reformats the code, applies the
+# safe lint auto-fixes and commits a lint report on this branch. Deleted afterwards.
+name: Bootstrap lint and format
+
+on:
+  push:
+    branches: [chore/lint-format]
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: chore/lint-format
+
+      - uses: pnpm/action-setup@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+
+      - name: Identity
+        run: |
+          git config user.name "Renato Batista"
+          git config user.email "109666299+RBatista24@users.noreply.github.com"
+
+      - name: Install the toolchain
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm add -Dw eslint@^9 @eslint/js@^9 typescript-eslint eslint-plugin-sonarjs eslint-plugin-jsx-a11y eslint-plugin-react-hooks @eslint-community/eslint-plugin-eslint-comments eslint-config-prettier globals prettier
+          git add package.json pnpm-lock.yaml
+          git commit -m "build: add ESLint 9, Prettier and the Sonar, jsx-a11y and React hooks rules"
+
+      - name: Format
+        run: |
+          pnpm format
+          git add -A
+          git commit -m "style: format with Prettier (4 spaces, single quotes, width 100)"
+          git rev-parse HEAD > .git-blame-ignore-revs.tmp
+          { echo "# Bulk reformat with Prettier; skipped by git blame (git config blame.ignoreRevsFile .git-blame-ignore-revs)"; cat .git-blame-ignore-revs.tmp; } > .git-blame-ignore-revs
+          rm .git-blame-ignore-revs.tmp
+          git add .git-blame-ignore-revs
+          git commit -m "chore: let git blame skip the bulk reformat"
+
+      - name: Lint auto-fixes
+        run: |
+          pnpm lint:fix || true
+          pnpm format
+          git add -A
+          git diff --cached --quiet || git commit -m "style: apply ESLint auto-fixes"
+
+      - name: Report
+        run: |
+          {
+            echo "== lint"; pnpm -s lint 2>&1 || true
+            echo "== typecheck"; pnpm -s typecheck 2>&1 || true
+            echo "== test"; pnpm -s test 2>&1 | tail -15 || true
+          } > lint-report.txt
+          git add lint-report.txt
+          git commit -m "chore: lint report from the bootstrap run"
+
+      - name: Push
+        run: git push origin HEAD:chore/lint-format

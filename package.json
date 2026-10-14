@@ -19,7 +19,13 @@
     "demo": "tsx services/api/src/demo.ts",
     "check:providers": "tsx services/api/src/check-providers.ts",
     "why": "tsx services/api/src/why.ts",
-    "explain": "tsx services/api/src/why.ts"
+    "explain": "tsx services/api/src/why.ts",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "fix": "pnpm format && pnpm lint:fix",
+    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
