@@ -30,7 +30,7 @@ export function InfoTag({ kind, className, compact = false }: { kind: InfoKind; 
         <span
           tabIndex={0}
           className={cn(
-            'inline-flex shrink-0 cursor-help items-center gap-1 rounded-full border-[1.5px] px-2 py-0.5 text-[0.7rem] leading-none font-medium whitespace-nowrap outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50',
+            'inline-flex shrink-0 cursor-help items-center gap-1 rounded-full border-[1.5px] px-2 py-0.5 text-[0.7rem] leading-none font-medium whitespace-nowrap outline-none focus-visible:ring-[3px] focus-visible:ring-ring',
             STYLE[kind],
             compact && 'px-1.5',
             className,

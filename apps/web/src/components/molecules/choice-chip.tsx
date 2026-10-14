@@ -10,7 +10,7 @@ export function ChoiceChip({ label, onClick, className }: { label: string; onCli
       type="button"
       onClick={onClick}
       className={cn(
-        'border-input hover:border-primary hover:bg-accent focus-visible:ring-ring/50 inline-flex items-center gap-1 rounded-full border bg-transparent px-3 py-1 text-sm transition-colors outline-none focus-visible:ring-[3px]',
+        'border-input hover:border-primary hover:bg-accent focus-visible:ring-ring inline-flex items-center gap-1 rounded-full border bg-transparent px-3 py-1 text-sm transition-colors outline-none focus-visible:ring-[3px]',
         className,
       )}
     >
