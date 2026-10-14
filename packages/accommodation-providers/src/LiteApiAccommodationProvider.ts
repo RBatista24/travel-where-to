@@ -70,6 +70,129 @@ export interface LiteApiOptions {
     readonly priceTtlMinutes?: number;
 }
 
+type HotelData = z.infer<typeof HotelDataSchema>;
+type RateData = z.infer<typeof RateSchema>;
+
+interface CheapestRoom {
+    readonly amount: number;
+    readonly currency: string;
+    readonly rate: RateData | undefined;
+    readonly offerId: string;
+}
+
+function ratesBody(req: AccommodationSearchRequest, options: LiteApiOptions) {
+    const c = countTravellers(req.travellers);
+    return {
+        checkin: req.checkIn,
+        checkout: req.checkOut,
+        currency: req.currency,
+        guestNationality: options.guestNationality ?? 'PT',
+        // One room for the whole party; real ages for children and babies.
+        occupancies: [{ adults: c.adults, children: [...c.childAges, ...c.infantAges] }],
+        latitude: req.centre.lat,
+        longitude: req.centre.lon,
+        radius: options.radiusM ?? 6000,
+        // Looking for specific hotels (e.g. Disney Hotels): take the whole area, the engine filters by name.
+        limit: req.wantedPropertyNames?.length ? 200 : (options.limit ?? 40),
+        maxRatesPerHotel: 1,
+        includeHotelData: true,
+        timeout: 8,
+    };
+}
+
+function hotelInfoById(hotels: readonly unknown[]): Map<string, HotelData> {
+    const hotelInfo = new Map<string, HotelData>();
+    for (const h of hotels) {
+        const p = HotelDataSchema.safeParse(h);
+        if (p.success) hotelInfo.set(p.data.id, p.data);
+    }
+    return hotelInfo;
+}
+
+/** The cheapest bookable room for the party, in the requested currency. */
+function cheapestRoom(
+    hotelId: string,
+    roomTypes: readonly unknown[],
+    currency: string,
+): CheapestRoom | undefined {
+    let best: CheapestRoom | undefined;
+    for (const rt of roomTypes) {
+        const r = RoomTypeSchema.safeParse(rt);
+        if (!r.success) continue;
+        const rate = r.data.rates?.[0];
+        const total = r.data.offerRetailRate ?? rate?.retailRate?.total?.[0];
+        if (!total || total.amount <= 0 || total.currency !== currency) continue;
+        if (!best || total.amount < best.amount)
+            best = {
+                amount: total.amount,
+                currency: total.currency,
+                rate,
+                offerId: r.data.offerId ?? hotelId,
+            };
+    }
+    return best;
+}
+
+function hasBreakfast(rate: RateData | undefined): boolean {
+    const board = (rate?.boardType ?? '').toUpperCase();
+    return (
+        ['BB', 'BI', 'HB', 'FB', 'AI'].includes(board) || /breakfast/i.test(rate?.boardName ?? '')
+    );
+}
+
+/** Straight-line distances from the provider's coordinates; omitted when it gave none. */
+function distanceFields(
+    coords: { lat: number; lon: number } | undefined,
+    req: AccommodationSearchRequest,
+): Partial<Pick<AccommodationOffer, 'distanceToCentreM' | 'distanceToBeachM'>> {
+    if (!coords) return {};
+    return {
+        distanceToCentreM: Math.round(haversineKm(coords, req.centre) * 1000),
+        ...(req.beach
+            ? { distanceToBeachM: Math.round(haversineKm(coords, req.beach) * 1000) }
+            : {}),
+    };
+}
+
+function toOffer(
+    hotelId: string,
+    info: HotelData,
+    best: CheapestRoom,
+    req: AccommodationSearchRequest,
+    now: Date,
+    expiresAt: Date,
+): AccommodationOffer {
+    const lat = info.latitude ?? undefined;
+    const lon = info.longitude ?? undefined;
+    const coords = lat !== undefined && lon !== undefined ? { lat, lon } : undefined;
+    const breakfast = hasBreakfast(best.rate);
+    const stars = info.stars ?? info.starRating ?? undefined;
+    return {
+        propertyId: `liteapi:${hotelId}`,
+        name: info.name,
+        type: 'HOTEL',
+        ...(stars ? { stars: Math.round(stars) } : {}),
+        ...(info.rating ? { rating: Math.round(info.rating * 10) / 10 } : {}),
+        ...(info.reviewCount ? { reviewCount: info.reviewCount } : {}),
+        facilities: breakfast ? ['breakfast'] : [],
+        coordinates: coords ?? req.centre,
+        ...distanceFields(coords, req),
+        roomDescription:
+            [best.rate?.name, best.rate?.boardName].filter(Boolean).join(' · ') || 'Room',
+        breakfastIncluded: breakfast,
+        price: {
+            amount: fromMajor(best.amount, best.currency),
+            confidence: 'VERIFIED',
+            attribution: {
+                provider: PROVIDER,
+                providerOfferId: best.offerId,
+                retrievedAt: now,
+                expiresAt,
+            },
+        },
+    };
+}
+
 /**
  * Hotel rates from LiteAPI (Nuitée): `POST /v3.0/hotels/rates` around the destination's
  * centre, with the real occupancy (children ages), cheapest rate per hotel, hotel data
@@ -98,23 +221,6 @@ export class LiteApiAccommodationProvider implements AccommodationProvider {
     }
 
     private async fetchRates(req: AccommodationSearchRequest): Promise<AccommodationOffer[]> {
-        const c = countTravellers(req.travellers);
-        const body = {
-            checkin: req.checkIn,
-            checkout: req.checkOut,
-            currency: req.currency,
-            guestNationality: this.options.guestNationality ?? 'PT',
-            // One room for the whole party; real ages for children and babies.
-            occupancies: [{ adults: c.adults, children: [...c.childAges, ...c.infantAges] }],
-            latitude: req.centre.lat,
-            longitude: req.centre.lon,
-            radius: this.options.radiusM ?? 6000,
-            // Looking for specific hotels (e.g. Disney Hotels): take the whole area, the engine filters by name.
-            limit: req.wantedPropertyNames?.length ? 200 : (this.options.limit ?? 40),
-            maxRatesPerHotel: 1,
-            includeHotelData: true,
-            timeout: 8,
-        };
         const { status, body: res } = await providerFetchJson(
             `${this.options.baseUrl ?? 'https://api.liteapi.travel/v3.0'}/hotels/rates`,
             {
@@ -124,7 +230,7 @@ export class LiteApiAccommodationProvider implements AccommodationProvider {
                     'Content-Type': 'application/json',
                     Accept: 'application/json',
                 },
-                body: JSON.stringify(body),
+                body: JSON.stringify(ratesBody(req, this.options)),
             },
             {
                 provider: PROVIDER,
@@ -137,11 +243,7 @@ export class LiteApiAccommodationProvider implements AccommodationProvider {
         if (!parsed.success)
             throw new ProviderError(PROVIDER, 'INVALID_RESPONSE', parsed.error.message);
 
-        const hotelInfo = new Map<string, z.infer<typeof HotelDataSchema>>();
-        for (const h of parsed.data.hotels ?? []) {
-            const p = HotelDataSchema.safeParse(h);
-            if (p.success) hotelInfo.set(p.data.id, p.data);
-        }
+        const hotelInfo = hotelInfoById(parsed.data.hotels ?? []);
         const now = this.clock.now();
         const expiresAt = new Date(now.getTime() + (this.options.priceTtlMinutes ?? 30) * 60_000);
         const offers: AccommodationOffer[] = [];
@@ -150,68 +252,9 @@ export class LiteApiAccommodationProvider implements AccommodationProvider {
             if (!h.success) continue;
             const info = hotelInfo.get(h.data.hotelId);
             if (!info) continue; // no name/location → can't show it honestly
-            // Cheapest bookable room for the party.
-            let best:
-                | {
-                      amount: number;
-                      currency: string;
-                      rate: z.infer<typeof RateSchema> | undefined;
-                      offerId: string;
-                  }
-                | undefined;
-            for (const rt of h.data.roomTypes) {
-                const r = RoomTypeSchema.safeParse(rt);
-                if (!r.success) continue;
-                const rate = r.data.rates?.[0];
-                const total = r.data.offerRetailRate ?? rate?.retailRate?.total?.[0];
-                if (!total || total.amount <= 0 || total.currency !== req.currency) continue;
-                if (!best || total.amount < best.amount)
-                    best = {
-                        amount: total.amount,
-                        currency: total.currency,
-                        rate,
-                        offerId: r.data.offerId ?? h.data.hotelId,
-                    };
-            }
+            const best = cheapestRoom(h.data.hotelId, h.data.roomTypes, req.currency);
             if (!best) continue;
-            const lat = info.latitude ?? undefined;
-            const lon = info.longitude ?? undefined;
-            const coords = lat !== undefined && lon !== undefined ? { lat, lon } : undefined;
-            const board = (best.rate?.boardType ?? '').toUpperCase();
-            const breakfast =
-                ['BB', 'BI', 'HB', 'FB', 'AI'].includes(board) ||
-                /breakfast/i.test(best.rate?.boardName ?? '');
-            const stars = info.stars ?? info.starRating ?? undefined;
-            offers.push({
-                propertyId: `liteapi:${h.data.hotelId}`,
-                name: info.name,
-                type: 'HOTEL',
-                ...(stars ? { stars: Math.round(stars) } : {}),
-                ...(info.rating ? { rating: Math.round(info.rating * 10) / 10 } : {}),
-                ...(info.reviewCount ? { reviewCount: info.reviewCount } : {}),
-                facilities: breakfast ? ['breakfast'] : [],
-                coordinates: coords ?? req.centre,
-                // Straight-line distances from the provider's coordinates.
-                ...(coords
-                    ? { distanceToCentreM: Math.round(haversineKm(coords, req.centre) * 1000) }
-                    : {}),
-                ...(coords && req.beach
-                    ? { distanceToBeachM: Math.round(haversineKm(coords, req.beach) * 1000) }
-                    : {}),
-                roomDescription:
-                    [best.rate?.name, best.rate?.boardName].filter(Boolean).join(' · ') || 'Room',
-                breakfastIncluded: breakfast,
-                price: {
-                    amount: fromMajor(best.amount, best.currency),
-                    confidence: 'VERIFIED',
-                    attribution: {
-                        provider: PROVIDER,
-                        providerOfferId: best.offerId,
-                        retrievedAt: now,
-                        expiresAt,
-                    },
-                },
-            });
+            offers.push(toOffer(h.data.hotelId, info, best, req, now, expiresAt));
         }
         return offers;
     }
