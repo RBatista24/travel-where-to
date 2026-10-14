@@ -39,7 +39,7 @@ export interface OpenMeteoOptions {
 }
 
 /**
- * Weather from Open-Meteo (data CC BY 4.0 — attribution shown in the UI).
+ * Weather from Open-Meteo (data CC BY 4.0 - attribution shown in the UI).
  * Near trips: daily forecast for the stay (confidence FORECAST).
  * Later trips: averages of the same calendar months over the last N full years from the
  * historical archive (confidence CLIMATE_AVERAGE), computed once per place and cached.

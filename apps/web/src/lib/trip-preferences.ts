@@ -53,7 +53,7 @@ export function timesText(times: readonly string[] | undefined): string {
   return TIMES_OF_DAY.filter((t) => times?.includes(t.value)).map((t) => t.label.toLowerCase()).join(' or ');
 }
 
-/** "Direct only · out morning · back evening" — empty when no flight preferences. */
+/** "Direct only · out morning · back evening" - empty when no flight preferences. */
 export function describeFlightPreferences(f: SearchCriteria['transport']['flights']): string {
   if (!f) return '';
   const parts: string[] = [];

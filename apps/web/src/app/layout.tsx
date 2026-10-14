@@ -8,7 +8,7 @@ const heading = Bricolage_Grotesque({ subsets: ['latin'], variable: '--font-head
 const body = Instrument_Sans({ subsets: ['latin'], variable: '--font-body', display: 'swap' });
 
 export const metadata: Metadata = {
-  title: 'Where to? — trips that fit your dates, people and budget',
+  title: 'Where to? · trips that fit your dates, people and budget',
   description: 'Search real flights, drives and stays from Portugal and see which places fit.',
 };
 

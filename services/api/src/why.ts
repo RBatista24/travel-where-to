@@ -1,5 +1,5 @@
 /**
- * `pnpm explain [searchId]` (or `pnpm run why`; plain `pnpm why` is a pnpm built-in) — explains a search the running API already did:
+ * `pnpm explain [searchId]` (or `pnpm run why`; plain `pnpm why` is a pnpm built-in) - explains a search the running API already did:
  * which places were left out and why, provider problems, notices and data sources.
  * Reads from the running API (default http://localhost:4000); prints no secrets.
  */
@@ -28,7 +28,7 @@ try {
   if (!id) {
     const list = await get<{ searches: { searchId: string }[] }>('/api/searches');
     id = list.searches[0]?.searchId;
-    if (!id) throw new Error('No searches yet — run one in the app first.');
+    if (!id) throw new Error('No searches yet - run one in the app first.');
   }
   const r = await get<Result>(`/api/searches/${encodeURIComponent(id)}`);
   console.log(`Search ${r.searchId}: ${r.totalViable} trip(s) fit`);

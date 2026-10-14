@@ -18,7 +18,7 @@ export const ESTIMATE_PROVIDER = 'our-estimate';
  * Wraps a cache-based flight provider. When it has NO price at all for a request (quiet route,
  * dates far ahead), returns our own distance-based estimate instead of dropping the place:
  * confidence ESTIMATED, the basis written on the cost line, no flight times, and a Google Flights
- * link to check. Errors are never hidden — only an empty answer triggers the estimate.
+ * link to check. Errors are never hidden - only an empty answer triggers the estimate.
  * The live check (SerpApi) re-prices the top results, replacing estimates with real prices.
  */
 export class EstimatedFlightFallback implements FlightProvider {

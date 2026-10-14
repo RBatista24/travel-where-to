@@ -112,7 +112,7 @@ export function scoreTransport(option: TransportOption, criteria: SearchCriteria
     if (pref !== undefined && drive > pref * 60) {
       const excessHours = (drive - pref * 60) / 60;
       score -= 15 + excessHours * 5;
-      reasons.push({ tone: 'WARNING', code: 'DRIVE_ABOVE_PREFERRED', message: `${formatDuration(drive)} drive — above your preferred ${pref}h` });
+      reasons.push({ tone: 'WARNING', code: 'DRIVE_ABOVE_PREFERRED', message: `${formatDuration(drive)} drive, above your preferred ${pref}h` });
     } else {
       reasons.push({ tone: 'POSITIVE', code: 'DRIVE', message: `${formatDuration(drive)} drive, no flights needed` });
     }

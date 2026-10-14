@@ -185,7 +185,7 @@ function TransportDetails({ rec }: { rec: TripRecommendation }) {
   );
 }
 
-/** A Booking.com search for this hotel, dates and group — for providers without a public booking page. */
+/** A Booking.com search for this hotel, dates and group - for providers without a public booking page. */
 function bookingSearchLink(rec: TripRecommendation, travellers: SearchCriteria['travellers']): string {
   const adults = travellers.filter((t) => t.type === 'ADULT').length;
   const kids = travellers.filter((t) => t.type !== 'ADULT');

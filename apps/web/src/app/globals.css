@@ -8,10 +8,10 @@
  * Base: shadcn/ui token names, recoloured with an Atlantic palette (ink, azulejo blue, paper).
  * Trust tokens: every value on screen is one of four kinds of information (spec §55),
  * and each kind has its own colour AND its own line style so it never relies on colour alone:
- *   verified   — provider fact          → solid line,  sea-glass
- *   indicative — provider, not bookable → solid line,  azulejo blue
- *   estimated  — calculated by us       → dashed line, amber
- *   ai         — AI interpretation      → dotted line, violet
+ *   verified   - provider fact          → solid line,  sea-glass
+ *   indicative - provider, not bookable → solid line,  azulejo blue
+ *   estimated  - calculated by us       → dashed line, amber
+ *   ai         - AI interpretation      → dotted line, violet
  */
 :root {
   --radius: 0.75rem;

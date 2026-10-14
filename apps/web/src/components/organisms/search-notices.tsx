@@ -36,7 +36,7 @@ export function SearchNotices({ result }: { result: SearchResult }) {
                 <span className="text-foreground font-medium">
                   {names.length} × {reason}
                 </span>
-                <span className="text-muted-foreground"> — {names.join(', ')}</span>
+                <span className="text-muted-foreground"> - {names.join(', ')}</span>
               </li>
             ))}
           </ul>

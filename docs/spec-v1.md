@@ -1,5 +1,5 @@
 # Travel Discovery Engine
-## Product & Technical Specification — V1
+## Product & Technical Specification - V1
 
 **Status:** Approved for V1 development  
 **Document purpose:** Source of truth for product scope, behaviour, architecture and technical requirements.
@@ -442,7 +442,7 @@ The UI should be able to display:
 
 or:
 
-> Indicative price — may have changed
+> Indicative price - may have changed
 
 The application must clearly communicate that prices and availability can change before booking.
 
@@ -1512,7 +1512,7 @@ The frontend must never directly call:
 
 Development should happen in this order.
 
-## Phase 1 — Domain
+## Phase 1 - Domain
 
 Implement:
 
@@ -1528,7 +1528,7 @@ No external APIs.
 
 ---
 
-## Phase 2 — Mock Search Engine
+## Phase 2 - Mock Search Engine
 
 Implement:
 
@@ -1544,7 +1544,7 @@ User request
 
 ---
 
-## Phase 3 — UI
+## Phase 3 - UI
 
 Implement:
 
@@ -1558,7 +1558,7 @@ Implement:
 
 ---
 
-## Phase 4 — LLM Integration
+## Phase 4 - LLM Integration
 
 Implement:
 
@@ -1571,7 +1571,7 @@ The LLM must output structured data that is validated before being used.
 
 ---
 
-## Phase 5 — Real Flight Provider
+## Phase 5 - Real Flight Provider
 
 Implement the Skyscanner adapter.
 
@@ -1579,7 +1579,7 @@ The rest of the application must remain unchanged.
 
 ---
 
-## Phase 6 — Real Accommodation Provider
+## Phase 6 - Real Accommodation Provider
 
 Implement Booking.com adapter.
 
@@ -1587,19 +1587,19 @@ Again, the domain must remain provider-independent.
 
 ---
 
-## Phase 7 — Routing
+## Phase 7 - Routing
 
 Implement the selected routing provider.
 
 ---
 
-## Phase 8 — Weather
+## Phase 8 - Weather
 
 Implement weather provider.
 
 ---
 
-## Phase 9 — Production Hardening
+## Phase 9 - Production Hardening
 
 Implement:
 

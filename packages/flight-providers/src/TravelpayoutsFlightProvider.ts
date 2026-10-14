@@ -29,7 +29,7 @@ const PROVIDER = 'travelpayouts';
 /**
  * Flights from the Travelpayouts (Aviasales) Data API.
  *
- * - The data is a CACHE of recent searches, per adult, so every price is INDICATIVE —
+ * - The data is a CACHE of recent searches, per adult, so every price is INDICATIVE -
  *   including the ones returned by `searchLive`. The deep link opens Aviasales with the
  *   whole party, where the real bookable total is shown.
  * - One `grouped_prices` call returns the cheapest round trip for every departure date of

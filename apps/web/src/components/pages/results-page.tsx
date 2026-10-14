@@ -81,7 +81,7 @@ function Results({ result }: { result: SearchResult }) {
           ? 'Nothing fits every requirement'
           : result.recommendations.length === 1
             ? 'One trip fits'
-            : `${result.totalViable} trips fit — here are the best ${result.recommendations.length}`
+            : `${result.totalViable} trips fit: here are the best ${result.recommendations.length}`
       }
       summary={
         <>

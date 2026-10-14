@@ -7,7 +7,7 @@ import { formatAgo, isPast } from '@/lib/format';
 import { providerLabel } from '@/lib/labels';
 import type { PriceConfidence, ProviderAttribution } from '@/lib/types';
 
-/** "Price checked 4 minutes ago" / "Indicative price — may have changed" / expiry warning. */
+/** "Price checked 4 minutes ago" / "Indicative price - may have changed" / expiry warning. */
 export function Freshness({
   attribution,
   confidence,
@@ -28,9 +28,9 @@ export function Freshness({
   const expired = now !== null && isPast(attribution.expiresAt, now);
   const text =
     confidence === 'INDICATIVE'
-      ? `Indicative price from ${providerLabel(attribution.provider)} — may have changed`
+      ? `Indicative price from ${providerLabel(attribution.provider)} - may have changed`
       : expired
-        ? 'Price may have changed — search again before booking'
+        ? 'Price may have changed - search again before booking'
         : `Price checked ${now ? formatAgo(attribution.retrievedAt, now) : 'recently'} with ${providerLabel(attribution.provider)}`;
   const Icon = expired ? TriangleAlertIcon : ClockIcon;
   return (

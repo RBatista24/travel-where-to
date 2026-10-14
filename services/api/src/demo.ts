@@ -24,7 +24,7 @@ const criteria: SearchCriteria = {
 };
 
 const result = await createMockSearchEngine().search(criteria);
-console.log(`\n${result.searchId} — "€1,000, four nights, two adults and one child, warm beach destination in November"`);
+console.log(`\n${result.searchId} - "€1,000, four nights, two adults and one child, warm beach destination in November"`);
 console.log('All prices come from MOCK providers.\n');
 result.recommendations.forEach((r, i) => {
   const t = r.transport;

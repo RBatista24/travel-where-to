@@ -50,7 +50,7 @@ export function mapAmenities(amenities: readonly string[]): AccommodationFacilit
 
 /**
  * Hotels from Google Hotels through SerpApi: real current prices from many sites.
- * One call per destination and dates — expensive on the free plan (250 searches/month),
+ * One call per destination and dates - expensive on the free plan (250 searches/month),
  * so prefer LiteAPI as the main stays provider and keep this for small searches.
  * Google ratings are 1–5; they are doubled to fit our 0–10 scale.
  */

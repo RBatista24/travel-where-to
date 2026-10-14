@@ -23,13 +23,13 @@ const ROWS: Row[] = [
   { label: 'Transport', cell: (r) => (r.transport.mode === 'FLIGHT' ? `Flight from ${r.transport.offer.originAirport}` : 'Car') },
   { label: 'Door to door', cell: (r) => formatDuration(r.transport.doorToDoorMinutes) },
   { label: 'Stay', cell: (r) => r.accommodation.name },
-  { label: 'Guest rating', cell: (r) => r.accommodation.rating?.toFixed(1) ?? '—' },
-  { label: 'To the centre', cell: (r) => (r.accommodation.distanceToCentreM !== undefined ? formatDistance(r.accommodation.distanceToCentreM) : '—') },
-  { label: 'To the beach', cell: (r) => (r.accommodation.distanceToBeachM !== undefined ? formatDistance(r.accommodation.distanceToBeachM) : '—') },
+  { label: 'Guest rating', cell: (r) => r.accommodation.rating?.toFixed(1) ?? '-' },
+  { label: 'To the centre', cell: (r) => (r.accommodation.distanceToCentreM !== undefined ? formatDistance(r.accommodation.distanceToCentreM) : '-') },
+  { label: 'To the beach', cell: (r) => (r.accommodation.distanceToBeachM !== undefined ? formatDistance(r.accommodation.distanceToBeachM) : '-') },
   { label: 'Beach', cell: (r) => stars(r.destination.scores.beach) },
   { label: 'Family', cell: (r) => stars(r.destination.scores.family) },
   { label: 'Culture', cell: (r) => stars(r.destination.scores.culture) },
-  { label: 'Weather', cell: (r) => (r.weather ? `${Math.round(r.weather.avgHighC)}°C highs` : '—') },
+  { label: 'Weather', cell: (r) => (r.weather ? `${Math.round(r.weather.avgHighC)}°C highs` : '-') },
 ];
 
 export function CompareTable({ recs }: { recs: readonly TripRecommendation[] }) {

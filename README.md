@@ -17,7 +17,7 @@ The V1 spec is the source of truth: [`docs/spec-v1.md`](docs/spec-v1.md). Assump
 | 8 Weather | Open-Meteo adapter (forecast / recent-years averages) | ✅ |
 | 6 Stays | LiteAPI (main) or SerpApi Google Hotels | ✅ |
 | 5b Live flights | SerpApi Google Flights check of the top results | ✅ |
-| 9 | hardening | — |
+| 9 | hardening | - |
 
 ## Real data
 

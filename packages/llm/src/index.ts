@@ -45,7 +45,7 @@ export const TravelIntentSchema = z
     /** Flexible dates: leave on these weekdays and come back on these (0 = Sunday). */
     departOn: z.array(z.number().int().min(0).max(6)).min(1).optional(),
     returnOn: z.array(z.number().int().min(0).max(6)).min(1).optional(),
-    /** Parts of the request the model could not map to supported criteria — shown to the user. */
+    /** Parts of the request the model could not map to supported criteria - shown to the user. */
     unmapped: z.array(z.string()).default([]),
   })
   .strict();

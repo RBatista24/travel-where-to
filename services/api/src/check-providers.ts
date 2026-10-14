@@ -54,7 +54,7 @@ async function step(name: string, fn: () => Promise<string>) {
 }
 
 if (want('travelpayouts', !!TP)) {
-  await step('Travelpayouts — LIS → AGP, cached round trips', async () => {
+  await step('Travelpayouts - LIS → AGP, cached round trips', async () => {
     const p = new TravelpayoutsFlightProvider({ token: TP, market: env.TRAVELPAYOUTS_MARKET || 'pt' });
     let found = 0;
     let sample = '';
@@ -71,14 +71,14 @@ if (want('travelpayouts', !!TP)) {
 }
 
 if (want('openrouteservice', !!ORS)) {
-  await step('openrouteservice — Lisbon → Málaga by car', async () => {
+  await step('openrouteservice - Lisbon → Málaga by car', async () => {
     const r = await new OpenRouteServiceRoutingProvider({ apiKey: ORS }).calculateRoute({ from: lisbon, to: malaga });
     return `${r.distanceKm} km, ${Math.floor(r.durationMinutes / 60)}h${String(r.durationMinutes % 60).padStart(2, '0')}, tolls ≈ ${r.tolls ? formatMoney(r.tolls) : 'n/a'}`;
   });
 }
 
 if (want('open-meteo', env.WEATHER_PROVIDER?.trim() === 'open-meteo')) {
-  await step('Open-Meteo — Málaga forecast and climate', async () => {
+  await step('Open-Meteo - Málaga forecast and climate', async () => {
     const p = new OpenMeteoWeatherProvider(env.OPEN_METEO_API_KEY ? { apiKey: env.OPEN_METEO_API_KEY } : {});
     const soon = toLocalDate(new Date());
     const f = await p.getForecast({ locationId: 'malaga', coordinates: malaga, startDate: addDays(soon, 2), endDate: addDays(soon, 5) });
@@ -88,19 +88,19 @@ if (want('open-meteo', env.WEATHER_PROVIDER?.trim() === 'open-meteo')) {
 }
 
 if (want('liteapi', !!LITEAPI)) {
-  await step('LiteAPI — hotels around Málaga centre, 2 adults + child 5', async () => {
+  await step('LiteAPI - hotels around Málaga centre, 2 adults + child 5', async () => {
     const p = new LiteApiAccommodationProvider({ apiKey: LITEAPI });
     const offers = await p.search({
       locationId: 'malaga', locationName: 'Málaga, Spain', centre: malaga, checkIn: start, checkOut: end,
       travellers: [...two, { type: 'CHILD', age: 5 }], types: ['HOTEL'], currency: 'EUR',
     });
     const cheapest = [...offers].sort((a, b) => a.price.amount.amountMinor - b.price.amount.amountMinor).slice(0, 3);
-    return `${offers.length} hotels with rates. Cheapest: ${cheapest.map((o) => `${o.name} ${formatMoney(o.price.amount)}${o.rating ? ` (${o.rating})` : ''}`).join('; ') || '—'}`;
+    return `${offers.length} hotels with rates. Cheapest: ${cheapest.map((o) => `${o.name} ${formatMoney(o.price.amount)}${o.rating ? ` (${o.rating})` : ''}`).join('; ') || '-'}`;
   });
 }
 
 if (want('serpapi', !!SERPAPI)) {
-  await step('SerpApi Google Flights — per person or total? (uses 2 searches)', async () => {
+  await step('SerpApi Google Flights - per person or total? (uses 2 searches)', async () => {
     const p = new SerpApiGoogleFlightsProvider({ apiKey: SERPAPI, gl: env.SERPAPI_GL || 'pt' });
     const req = { originAirports: ['LIS'], destinationAirports: ['AGP'], outboundDate: start, returnDate: end, currency: 'EUR' };
     const a = (await p.searchLive({ ...req, travellers: one }))[0];

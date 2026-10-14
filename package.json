@@ -2,7 +2,7 @@
   "name": "travel-where-to",
   "private": true,
   "version": "0.1.0",
-  "description": "Travel Discovery Engine \u2014 find where you can go from origin, dates, travellers, budget and preferences.",
+  "description": "Travel Discovery Engine: find where you can go from origin, dates, travellers, budget and preferences.",
   "type": "module",
   "engines": {
     "node": ">=22"

@@ -5,7 +5,7 @@ import { Spinner } from '@/components/atoms/spinner';
 import { plural } from '@/lib/format';
 import type { RelaxationSuggestion } from '@/lib/types';
 
-/** Spec §37: never just "No results" — show which single change unlocks options. */
+/** Spec §37: never just "No results" - show which single change unlocks options. */
 export function RelaxationPanel({
   suggestions,
   onApply,
