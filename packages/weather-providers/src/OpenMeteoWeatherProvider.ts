@@ -2,13 +2,13 @@ import { z } from 'zod';
 import type { Clock } from '@travel-where-to/shared';
 import { addDays, daysBetween, monthOf, systemClock, toLocalDate } from '@travel-where-to/shared';
 import type { WeatherProvider, WeatherRequest, WeatherResult } from '@travel-where-to/domain';
+import { ProviderError } from '@travel-where-to/domain';
 import {
     PromiseCache,
-    ProviderError,
     providerFetchJson,
     providerStatusError,
     type FetchLike,
-} from '@travel-where-to/domain';
+} from '@travel-where-to/provider-http';
 
 const PROVIDER = 'open-meteo';
 const RAINY_DAY_MM = 1;

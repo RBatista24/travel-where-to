@@ -138,6 +138,9 @@ importers:
       '@travel-where-to/domain':
         specifier: workspace:*
         version: link:../domain
+      '@travel-where-to/provider-http':
+        specifier: workspace:*
+        version: link:../provider-http
       '@travel-where-to/shared':
         specifier: workspace:*
         version: link:../shared
@@ -168,6 +171,9 @@ importers:
       '@travel-where-to/domain':
         specifier: workspace:*
         version: link:../domain
+      '@travel-where-to/provider-http':
+        specifier: workspace:*
+        version: link:../provider-http
       '@travel-where-to/shared':
         specifier: workspace:*
         version: link:../shared
@@ -193,6 +199,12 @@ importers:
         specifier: workspace:*
         version: link:../shared
 
+  packages/provider-http:
+    dependencies:
+      '@travel-where-to/domain':
+        specifier: workspace:*
+        version: link:../domain
+
   packages/ranking:
     dependencies:
       '@travel-where-to/domain':
@@ -207,6 +219,9 @@ importers:
       '@travel-where-to/domain':
         specifier: workspace:*
         version: link:../domain
+      '@travel-where-to/provider-http':
+        specifier: workspace:*
+        version: link:../provider-http
       '@travel-where-to/shared':
         specifier: workspace:*
         version: link:../shared
@@ -252,6 +267,9 @@ importers:
       '@travel-where-to/domain':
         specifier: workspace:*
         version: link:../domain
+      '@travel-where-to/provider-http':
+        specifier: workspace:*
+        version: link:../provider-http
       '@travel-where-to/shared':
         specifier: workspace:*
         version: link:../shared
@@ -276,6 +294,9 @@ importers:
       '@travel-where-to/llm':
         specifier: workspace:*
         version: link:../../packages/llm
+      '@travel-where-to/provider-http':
+        specifier: workspace:*
+        version: link:../../packages/provider-http
       '@travel-where-to/ranking':
         specifier: workspace:*
         version: link:../../packages/ranking

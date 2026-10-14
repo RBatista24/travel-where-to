@@ -1,13 +1,13 @@
 import { z } from 'zod';
 import { fromMajor, money, multiplyMoney, type Money } from '@travel-where-to/shared';
 import type { RouteRequest, RouteResult, RoutingProvider } from '@travel-where-to/domain';
+import { ProviderError } from '@travel-where-to/domain';
 import {
     PromiseCache,
-    ProviderError,
     providerFetchJson,
     providerStatusError,
     type FetchLike,
-} from '@travel-where-to/domain';
+} from '@travel-where-to/provider-http';
 
 const PROVIDER = 'openrouteservice';
 

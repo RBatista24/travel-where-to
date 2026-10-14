@@ -1,0 +1,12 @@
+{
+    "name": "@travel-where-to/provider-http",
+    "version": "0.1.0",
+    "private": true,
+    "type": "module",
+    "exports": {
+        ".": "./src/index.ts"
+    },
+    "dependencies": {
+        "@travel-where-to/domain": "workspace:*"
+    }
+}
