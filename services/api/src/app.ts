@@ -168,13 +168,11 @@ export function createApp(deps: AppDeps): Server {
                         createdAt: s.createdAt,
                         criteria: s.criteria,
                         results: s.totalViable,
-                        top: s.recommendations
-                            .slice(0, 3)
-                            .map((r) => ({
-                                name: r.destination.name,
-                                score: r.score.total,
-                                tripTotal: r.costs.tripTotal,
-                            })),
+                        top: s.recommendations.slice(0, 3).map((r) => ({
+                            name: r.destination.name,
+                            score: r.score.total,
+                            tripTotal: r.costs.tripTotal,
+                        })),
                     })),
                 });
             }

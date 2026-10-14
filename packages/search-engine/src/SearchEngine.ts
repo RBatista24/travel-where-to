@@ -1065,23 +1065,19 @@ function budgetPicks(
     };
     const used = (e: Evaluated) => Math.round((total(e) / criteria.budget.amountMinor) * 100);
     return {
-        cheapest: cheapest
-            .slice(0, size)
-            .map((e) =>
-                tag(e, 'cheapest', {
-                    tone: 'POSITIVE',
-                    code: 'PICK_CHEAPEST',
-                    message: `Cheapest trip we found here (${used(e)}% of your budget)`,
-                }),
-            ),
-        fullBudget: fullBudget
-            .slice(0, size)
-            .map((e) =>
-                tag(e, 'full-budget', {
-                    tone: 'POSITIVE',
-                    code: 'PICK_FULL_BUDGET',
-                    message: `Makes the most of your budget: ${used(e)}% of it${e.accommodation.stars ? ` for a ${e.accommodation.stars}★ stay` : ''}`,
-                }),
-            ),
+        cheapest: cheapest.slice(0, size).map((e) =>
+            tag(e, 'cheapest', {
+                tone: 'POSITIVE',
+                code: 'PICK_CHEAPEST',
+                message: `Cheapest trip we found here (${used(e)}% of your budget)`,
+            }),
+        ),
+        fullBudget: fullBudget.slice(0, size).map((e) =>
+            tag(e, 'full-budget', {
+                tone: 'POSITIVE',
+                code: 'PICK_FULL_BUDGET',
+                message: `Makes the most of your budget: ${used(e)}% of it${e.accommodation.stars ? ` for a ${e.accommodation.stars}★ stay` : ''}`,
+            }),
+        ),
     };
 }

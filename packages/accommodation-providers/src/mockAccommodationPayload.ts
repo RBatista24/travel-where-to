@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { money } from '@travel-where-to/shared';
-import type { AccommodationOffer } from '@travel-where-to/domain';
-import { ACCOMMODATION_FACILITIES, ProviderError } from '@travel-where-to/domain';
+import type { AccommodationOffer, ACCOMMODATION_FACILITIES } from '@travel-where-to/domain';
+import { ProviderError } from '@travel-where-to/domain';
 
 export const RawPropertySchema = z.object({
     hotel_id: z.string().min(1),
